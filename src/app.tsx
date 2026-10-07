@@ -40,13 +40,19 @@ export function App() {
       <div className="flex h-dvh overflow-hidden">
         <SidebarToggle />
         <Sidebar />
+        {/* Next to the sidebar the panes sit in an inset card; with it hidden they grow to fill the window. */}
         <main
           className={cn(
-            "min-w-0 flex-1 py-2 pr-2 transition-[padding] duration-200 ease-out motion-reduce:transition-none",
-            !sidebarOpen && "pl-2",
+            "min-w-0 flex-1 transition-[padding] duration-200 ease-out motion-reduce:transition-none",
+            sidebarOpen && "py-2 pr-2",
           )}
         >
-          <div className="h-full overflow-hidden rounded-lg border bg-background shadow-[0_1px_3px_oklch(0_0_0/0.04)] dark:shadow-none">
+          <div
+            className={cn(
+              "h-full overflow-hidden border bg-background transition-[border-radius,border-color,box-shadow] duration-200 ease-out motion-reduce:transition-none",
+              sidebarOpen ? "rounded-lg shadow-[0_1px_3px_oklch(0_0_0/0.04)] dark:shadow-none" : "border-transparent",
+            )}
+          >
             <ResizablePanelGroup id="paste:panes" defaultLayout={layout.defaultLayout} onLayoutChanged={layout.onLayoutChanged}>
               <ResizablePanel id="list" defaultSize="54" minSize={340}>
                 <section className="flex h-full min-w-0 flex-col">

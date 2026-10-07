@@ -12,6 +12,28 @@
     <meta name="color-scheme" content="light dark" />
     <meta name="theme-color" content="#f6f6f7" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#0c0c0e" media="(prefers-color-scheme: dark)" />
+    <!--
+      Resolve the theme before the first paint. next-themes only applies it once the bundle runs, so without
+      this a dark-mode reload paints the light canvas first. Mirrors next-themes' default "theme" storage key;
+      the colors are the --sidebar tokens from index.css.
+    -->
+    <style>
+      html {
+        background: oklch(0.975 0.002 286);
+        color-scheme: light;
+      }
+      html.dark {
+        background: oklch(0.155 0.004 286);
+        color-scheme: dark;
+      }
+    </style>
+    <script>
+      try {
+        var theme = localStorage.getItem("theme")
+        var dark = theme === "dark" || (theme !== "light" && matchMedia("(prefers-color-scheme: dark)").matches)
+        document.documentElement.classList.add(dark ? "dark" : "light")
+      } catch (e) {}
+    </script>
     <meta name="robots" content="index, follow" />
 
     <meta name="apple-mobile-web-app-capable" content="yes" />

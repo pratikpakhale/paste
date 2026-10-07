@@ -382,7 +382,11 @@ export function SidebarToggle() {
           size="icon-sm"
           aria-label={label}
           onClick={() => useUi.getState().setSidebarOpen(!open)}
-          className="fixed top-[calc(1.125rem+1px)] left-3 z-30 text-muted-foreground"
+          className={cn(
+            "fixed left-3 z-30 text-muted-foreground transition-[top] duration-200 ease-out motion-reduce:transition-none",
+            // Centered on the list header, which loses its 0.5rem inset when the sidebar hides.
+            open ? "top-[calc(1.125rem+1px)]" : "top-[calc(0.625rem+1px)]",
+          )}
         >
           <PanelLeft />
         </Button>

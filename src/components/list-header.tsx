@@ -46,7 +46,7 @@ export function ListHeader() {
     <header
       className={cn(
         "flex h-12 shrink-0 items-center gap-3 border-b pr-3 transition-[padding] duration-200 ease-out motion-reduce:transition-none",
-        sidebarOpen ? "pl-5" : "pl-11",
+        sidebarOpen ? "pl-5" : "pl-13",
       )}
     >
       <div className="flex min-w-0 items-center gap-2">
