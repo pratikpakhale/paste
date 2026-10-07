@@ -8,11 +8,14 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  /* App type scale, in rem so the root size below scales the whole UI. Register new names in lib/utils.ts. */
-  --text-micro: 0.77rem;
-  --text-caption: 0.85rem;
-  --text-detail: 0.94rem;
-  --text-title: 1.075rem;
+  /*
+   * App type scale on top of Tailwind's (body is text-sm, 14px). In rem, so the user's browser font size
+   * scales everything, shadcn components included. Register new names in lib/utils.ts.
+   */
+  --text-micro: 0.6875rem;
+  --text-caption: 0.75rem;
+  --text-detail: 0.8125rem;
+  --text-title: 0.9375rem;
   --font-heading: var(--font-sans);
   --font-sans: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "Geist Mono Variable", ui-monospace, SFMono-Regular, monospace;
@@ -126,8 +129,6 @@
   }
   html {
     @apply font-sans antialiased;
-    /* Everything is rem-based, so this one value sets the size of the whole UI. */
-    font-size: 14px;
     font-feature-settings: "cv11", "ss01";
     color-scheme: light;
   }
@@ -135,7 +136,11 @@
     color-scheme: dark;
   }
   body {
-    @apply overscroll-none bg-sidebar text-foreground select-none;
+    @apply overscroll-none bg-sidebar text-sm text-foreground select-none;
+  }
+  /* One stroke weight for every icon; utilities (e.g. stroke-[1.5] on large icons) still win. */
+  .lucide {
+    stroke-width: 1.75;
   }
   ::selection {
     background: oklch(0.6 0.16 274 / 30%);
@@ -162,12 +167,20 @@
 /* Rows are cheap to lay out but there can be thousands; let the browser skip offscreen ones. */
 .clip-row {
   content-visibility: auto;
-  contain-intrinsic-size: auto 36px;
+  /* Must match the row height (h-9), or the scrollbar jumps as rows render in. */
+  contain-intrinsic-size: auto 2.25rem;
 }
 
 .scrollbar-thin {
   scrollbar-width: thin;
   scrollbar-color: var(--border) transparent;
+  /* Content doesn't reflow when a scrollbar appears. */
+  scrollbar-gutter: stable;
+}
+
+/* Sonner ships a system font stack. */
+[data-sonner-toaster] {
+  font-family: var(--font-sans);
 }
 
 .checkerboard {

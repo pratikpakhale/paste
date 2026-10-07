@@ -6,7 +6,7 @@ import { CommandPalette } from "@/components/command-palette"
 import { DragLayer } from "@/components/drag-layer"
 import { ListHeader } from "@/components/list-header"
 import { Composer, ConfirmDialog, DropZone, QueueBar, ShortcutsDialog } from "@/components/overlays"
-import { Sidebar } from "@/components/sidebar"
+import { Sidebar, SidebarToggle } from "@/components/sidebar"
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable"
 import { purgeExpiredTrash } from "@/db/actions"
 import { usePasteCapture, useShortcuts } from "@/hooks/use-shortcuts"
@@ -38,6 +38,7 @@ export function App() {
   return (
     <DragLayer>
       <div className="flex h-dvh overflow-hidden">
+        <SidebarToggle />
         <Sidebar />
         <main
           className={cn(

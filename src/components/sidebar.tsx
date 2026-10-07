@@ -1,7 +1,22 @@
 import { useDndContext, useDroppable } from "@dnd-kit/core"
 import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
-import { Download, Ellipsis, Inbox, Keyboard, type LucideIcon, Monitor, Moon, Pin, Plus, Search, Sun, Trash2, Upload } from "lucide-react"
+import {
+  Download,
+  Ellipsis,
+  Inbox,
+  Keyboard,
+  type LucideIcon,
+  Monitor,
+  Moon,
+  PanelLeft,
+  Pin,
+  Plus,
+  Search,
+  Sun,
+  Trash2,
+  Upload,
+} from "lucide-react"
 import { useTheme } from "next-themes"
 import { type ReactNode, useState } from "react"
 import { Button } from "@/components/ui/button"
@@ -17,6 +32,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Kbd } from "@/components/ui/kbd"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { deleteSpace, renameSpace } from "@/db/actions"
 import type { Space } from "@/db/schema"
 import { useDeferredFocus } from "@/hooks/use-deferred-focus"
@@ -51,11 +67,12 @@ export function Sidebar() {
     >
       <aside
         className={cn(
-          "flex h-full w-60 flex-col gap-4 px-2.5 pt-3 pb-2.5 transition-[opacity,translate] duration-200 ease-out motion-reduce:transition-none",
-          !open && "-translate-x-6 opacity-0",
+          "flex h-full w-60 flex-col px-3 pt-[calc(0.5rem+1px)] pb-3 transition-[opacity,translate] duration-200 ease-out motion-reduce:transition-none",
+          !open && "-translate-x-4 opacity-0",
         )}
       >
-        <div className="flex items-center gap-2 px-1.5">
+        {/* Lines up with the list header; the left gap is where the fixed SidebarToggle sits. */}
+        <div className="flex h-12 shrink-0 items-center gap-2 pl-9">
           <Logo />
           <span className="font-medium tracking-tight text-sidebar-accent-foreground">Paste</span>
         </div>
@@ -63,14 +80,14 @@ export function Sidebar() {
         <button
           type="button"
           onClick={() => useUi.getState().setOverlay("palette")}
-          className="flex h-8 items-center gap-2 rounded-md border bg-background/60 px-2.5 text-muted-foreground shadow-xs transition-colors hover:bg-background hover:text-foreground dark:bg-white/[0.03] dark:hover:bg-white/[0.05]"
+          className="mt-1 flex h-8 shrink-0 items-center gap-2 rounded-md border bg-background/60 pr-1.5 pl-2.5 text-muted-foreground shadow-xs transition-colors hover:bg-background hover:text-foreground dark:bg-white/[0.03] dark:hover:bg-white/[0.05]"
         >
-          <Search className="size-3.5" />
-          <span className="flex-1 text-left">Search or jump to…</span>
+          <Search className="size-4" />
+          <span className="flex-1 text-left">Search…</span>
           <Kbd>⌘K</Kbd>
         </button>
 
-        <nav className="-mr-1 flex min-h-0 flex-1 scrollbar-thin flex-col gap-4 overflow-y-auto pr-1">
+        <nav className="mt-5 -mr-3 flex min-h-0 flex-1 scrollbar-thin flex-col gap-5 overflow-y-auto pr-3">
           <div className="flex flex-col gap-px">
             <NavItem
               icon={Inbox}
@@ -132,15 +149,15 @@ export function Sidebar() {
               <button
                 type="button"
                 onClick={() => void newSpace()}
-                className="flex h-7 items-center gap-2.5 rounded-md px-2 text-subtle hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                className="flex h-8 items-center gap-2.5 rounded-md px-2.5 text-subtle transition-colors duration-75 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
               >
-                <Plus className="size-3.5" /> New space
+                <Plus className="size-4" /> New space
               </button>
             )}
           </Section>
         </nav>
 
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-3 pt-3">
           <NavItem
             icon={Trash2}
             label="Trash"
@@ -159,7 +176,7 @@ export function Sidebar() {
 function Section({ title, action, children }: { title: string; action?: ReactNode; children: ReactNode }) {
   return (
     <div className="group/section flex flex-col gap-px">
-      <div className="flex h-6 items-center justify-between pr-1 pl-2 text-caption font-medium text-subtle">
+      <div className="flex h-7 items-center justify-between pr-1 pl-2.5 text-caption font-medium text-subtle">
         {title}
         {action}
       </div>
@@ -185,12 +202,12 @@ function NavItem({ icon: Icon, label, count, active, onClick, drop }: NavItemPro
       type="button"
       onClick={onClick}
       className={cn(
-        "flex h-7 items-center gap-2.5 rounded-md px-2 text-left transition-colors duration-75",
+        "flex h-8 items-center gap-2.5 rounded-md px-2.5 text-left transition-colors duration-75",
         active ? "bg-sidebar-accent text-sidebar-accent-foreground" : "hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground",
         isOver && "bg-primary/15 text-foreground ring-1 ring-primary/40",
       )}
     >
-      <Icon className={cn("size-3.5 shrink-0", active ? "text-sidebar-accent-foreground" : "text-subtle")} strokeWidth={1.75} />
+      <Icon className={cn("size-4 shrink-0", active ? "text-sidebar-accent-foreground" : "text-subtle")} />
       <span className="flex-1 truncate">{label}</span>
       {count > 0 && <span className="text-caption text-subtle tabular-nums">{count}</span>}
     </button>
@@ -238,13 +255,13 @@ function SpaceItem({ space, count, active }: { space: Space; count: number; acti
           onClick={() => useUi.getState().setView({ type: "space", id: space.id })}
           onDoubleClick={() => useUi.getState().setRenamingSpace(space.id)}
           className={cn(
-            "flex h-7 cursor-default items-center gap-2.5 rounded-md px-2 transition-colors duration-75 outline-none",
+            "flex h-8 cursor-default items-center gap-2.5 rounded-md px-2.5 transition-colors duration-75 outline-none",
             active ? "bg-sidebar-accent text-sidebar-accent-foreground" : "hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground",
             clipOver && "bg-primary/15 text-foreground ring-1 ring-primary/40",
             isDragging && "opacity-40",
           )}
         >
-          <span className="flex size-3.5 items-center justify-center">
+          <span className="flex size-4 items-center justify-center">
             <SpaceDot id={space.id} />
           </span>
           {renaming ? <RenameInput space={space} /> : <span className="flex-1 truncate">{space.name}</span>}
@@ -281,7 +298,7 @@ function RenameInput({ space }: { space: Space }) {
         if (e.key === "Escape") finish(false)
       }}
       onPointerDown={(e) => e.stopPropagation()}
-      className="-ml-1 h-5.5 min-w-0 flex-1 rounded-sm bg-background px-1 ring-1 ring-primary/50 outline-none"
+      className="-ml-1.5 h-6 min-w-0 flex-1 rounded-sm bg-background px-1.5 ring-1 ring-primary/50 outline-none"
     />
   )
 }
@@ -293,7 +310,7 @@ function Footer({ revision }: { revision: number }) {
   const { counts } = useData()
 
   return (
-    <div className="flex items-center gap-2 border-t border-sidebar-border px-1.5 pt-2.5">
+    <div className="flex items-center gap-2 border-t border-sidebar-border pt-3 pl-2.5">
       <div
         className="flex min-w-0 flex-1 flex-col gap-1.5"
         title={storage?.persisted ? "Storage is persistent" : "Browser may evict data under storage pressure"}
@@ -347,6 +364,34 @@ function Footer({ revision }: { revision: number }) {
         </DropdownMenuContent>
       </DropdownMenu>
     </div>
+  )
+}
+
+/**
+ * Fixed in the window corner rather than living in either header, so it stays put while the sidebar
+ * slides; the sidebar's logo row and the list header both leave room for it.
+ */
+export function SidebarToggle() {
+  const open = useUi((s) => s.sidebarOpen)
+  const label = open ? "Hide sidebar" : "Show sidebar"
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          aria-label={label}
+          onClick={() => useUi.getState().setSidebarOpen(!open)}
+          className="fixed top-[calc(1.125rem+1px)] left-3 z-30 text-muted-foreground"
+        >
+          <PanelLeft />
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent side="right">
+        {label}
+        <Kbd>[</Kbd>
+      </TooltipContent>
+    </Tooltip>
   )
 }
 

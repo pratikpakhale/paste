@@ -1,9 +1,22 @@
-import { AudioLines, Braces, CodeXml, File, FileText, Film, Image, Link2, type LucideIcon, Palette, Pilcrow, Type } from "lucide-react"
+import {
+  AudioLines,
+  Braces,
+  CodeXml,
+  File,
+  FileText,
+  Film,
+  Heading,
+  Image,
+  Link2,
+  type LucideIcon,
+  Palette,
+  TextAlignStart,
+} from "lucide-react"
 import type { Clip } from "@/db/schema"
 
 export const KIND_ICON: Record<Clip["kind"], LucideIcon> = {
-  text: Type,
-  markdown: Pilcrow,
+  text: TextAlignStart,
+  markdown: Heading,
   code: CodeXml,
   json: Braces,
   link: Link2,

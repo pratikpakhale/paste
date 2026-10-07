@@ -3,6 +3,7 @@ import { rectSortingStrategy, SortableContext, verticalListSortingStrategy } fro
 import { ClipboardPaste } from "lucide-react"
 import { Fragment, type MouseEvent, useCallback, useEffect, useMemo } from "react"
 import { Kbd } from "@/components/ui/kbd"
+import { cn } from "@/lib/utils"
 import type { Clip } from "@/db/schema"
 import { requestEdit } from "@/lib/ui-events"
 import { useData } from "@/state/data"
@@ -102,13 +103,13 @@ export function ClipList() {
     >
       <SortableContext items={ids} strategy={layout === "grid" ? rectSortingStrategy : verticalListSortingStrategy}>
         {layout === "grid" ? (
-          <div className="grid grid-cols-[repeat(auto-fill,minmax(14rem,1fr))] gap-3 p-4">{visible.map(item)}</div>
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(13rem,1fr))] gap-3 p-4">{visible.map(item)}</div>
         ) : (
-          <div className="py-1.5">
+          <div className="py-2">
             {visible.map((clip, i) => (
               <Fragment key={clip.id}>
                 {showSections && i === 0 && <SectionLabel>Pinned</SectionLabel>}
-                {showSections && i === firstUnpinned && <SectionLabel className="mt-2">Clips</SectionLabel>}
+                {showSections && i === firstUnpinned && <SectionLabel className="mt-1">Clips</SectionLabel>}
                 {item(clip)}
               </Fragment>
             ))}
@@ -120,7 +121,7 @@ export function ClipList() {
 }
 
 function SectionLabel({ children, className }: { children: string; className?: string }) {
-  return <div className={`px-4.5 pt-1 pb-1.5 text-caption font-medium text-subtle ${className ?? ""}`}>{children}</div>
+  return <div className={cn("flex h-8 items-end px-5 pb-1.5 text-caption font-medium text-subtle", className)}>{children}</div>
 }
 
 function EmptyList({ searching, trash }: { searching: boolean; trash: boolean }) {
@@ -129,7 +130,7 @@ function EmptyList({ searching, trash }: { searching: boolean; trash: boolean })
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-4 p-8 text-center">
       <div className="flex size-11 items-center justify-center rounded-xl border bg-card shadow-xs">
-        <ClipboardPaste className="size-5 text-muted-foreground" strokeWidth={1.5} />
+        <ClipboardPaste className="size-5 stroke-[1.5] text-muted-foreground" />
       </div>
       <div className="space-y-1">
         <p className="text-title font-medium">Paste anything</p>

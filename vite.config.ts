@@ -36,6 +36,30 @@ function siteUrls(siteUrl: string | undefined): Plugin {
   }
 }
 
+/** The Latin cuts of Geist and Geist Mono: what every first paint needs. */
+const PRELOAD_FONT = /(?:^|\/)geist(?:-mono)?-latin-wght-normal-[\w-]+\.woff2$/
+
+/**
+ * Fontsource declares `font-display: swap`, so a font that arrives after first paint re-flows the whole UI.
+ * Preloading the hashed Latin files lets them land before the first layout instead.
+ */
+function preloadFonts(): Plugin {
+  return {
+    name: "paste:preload-fonts",
+    transformIndexHtml: {
+      order: "post",
+      handler: (_html, { bundle }) =>
+        Object.keys(bundle ?? {})
+          .filter((file) => PRELOAD_FONT.test(file))
+          .map((file) => ({
+            tag: "link",
+            attrs: { rel: "preload", href: `/${file}`, as: "font", type: "font/woff2", crossorigin: "" },
+            injectTo: "head" as const,
+          })),
+    },
+  }
+}
+
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, import.meta.dirname, "")
   return {
@@ -43,6 +67,7 @@ export default defineConfig(({ mode }) => {
       react(),
       tailwindcss(),
       siteUrls(env.SITE_URL),
+      preloadFonts(),
       VitePWA({
         registerType: "autoUpdate",
         // index.html declares per-scheme theme colours; the generated single one would override them.

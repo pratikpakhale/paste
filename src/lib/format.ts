@@ -44,6 +44,11 @@ export function extensionStart(name: string): number {
   return dot > 0 && dot < name.length - 1 ? dot : name.length
 }
 
+/** Upper-cased extension for display (`PNG`), or empty when there is none. */
+export function fileExtension(name: string): string {
+  return name.slice(extensionStart(name) + 1).toUpperCase()
+}
+
 /**
  * The file name a rename resolves to. Path separators are replaced, an empty name keeps the old one,
  * and leaving the extension off keeps the old extension, so renaming `IMG_01.png` to `Receipt` gives `Receipt.png`.
@@ -99,6 +104,16 @@ export function formatAgo(timestamp: number, now = Date.now()): string {
   if (abs < 3600) return relative.format(Math.round(seconds / 60), "minute")
   if (abs < 86_400) return relative.format(Math.round(seconds / 3600), "hour")
   if (abs < 604_800) return relative.format(Math.round(seconds / 86_400), "day")
+  return shortDate.format(timestamp)
+}
+
+/** Fixed-width relative time for list rows: `now`, `31m`, `5h`, `3d`, then the date. */
+export function formatAgoShort(timestamp: number, now = Date.now()): string {
+  const minutes = Math.floor(Math.max(0, now - timestamp) / 60_000)
+  if (minutes < 1) return "now"
+  if (minutes < 60) return `${minutes}m`
+  if (minutes < 1440) return `${Math.floor(minutes / 60)}h`
+  if (minutes < 10_080) return `${Math.floor(minutes / 1440)}d`
   return shortDate.format(timestamp)
 }
 

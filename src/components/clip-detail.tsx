@@ -14,7 +14,7 @@ import {
   Trash2,
   X,
 } from "lucide-react"
-import { type ReactNode, useEffect, useRef, useState } from "react"
+import { type ReactNode, useEffect, useLayoutEffect, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import {
@@ -31,7 +31,7 @@ import { renameClip, updateClip } from "@/db/actions"
 import { type Clip, isFileClip, type TextClip, type TextKind } from "@/db/schema"
 import { isDownloadOnly } from "@/lib/clipboard"
 import { type LanguageOption, loadLanguages } from "@/lib/code"
-import { clipDetail, clipLabel, clipSize, extensionStart, formatAgo, formatBytes, formatDate, kindLabel } from "@/lib/format"
+import { clipDetail, clipLabel, clipSize, extensionStart, fileExtension, formatAgo, formatBytes, formatDate, kindLabel } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import { useActions } from "@/state/actions"
 import { onEditRequest, onRenameRequest } from "@/lib/ui-events"
@@ -39,6 +39,7 @@ import { useData } from "@/state/data"
 import { useUi } from "@/state/ui"
 import { CodeView, ColorView, FileCard, ImageView, JsonView, LinkView, MarkdownView, MediaView, PdfView, TextEditor } from "./clip-body"
 import { ClipThumb, SpaceDot } from "./clip-visual"
+import { Segmented } from "./segmented"
 
 export function DetailPane() {
   const { byId } = useData()
@@ -85,50 +86,113 @@ function IconAction({
   )
 }
 
-/** A file clip's name is its file name; a text clip's is its title, with the derived label as placeholder. */
+/** A file clip's name is its file name; a text clip's is its title, where empty means derived from the content. */
 const storedName = (clip: Clip) => (isFileClip(clip) ? clip.file.name : clip.title)
 
-/** Keyed by the stored name, so a rename that resolves differently (an extension kept) shows what was saved. */
-function TitleInput({ clip }: { clip: Clip }) {
-  const stored = storedName(clip)
+/**
+ * The clip's name in the detail header. Reads as text with a hover affordance; a click, R or "Rename" swaps in
+ * an input over the exact same box, so nothing moves. Files start with just the base name selected.
+ */
+function NameField({ clip }: { clip: Clip }) {
   const isFile = isFileClip(clip)
-  const [value, setValue] = useState(stored)
-  const ref = useRef<HTMLInputElement>(null)
+  const stored = storedName(clip)
+  /** `null` while not editing. */
+  const [draft, setDraft] = useState<string | null>(null)
+  const input = useRef<HTMLInputElement>(null)
+  const cancelled = useRef(false)
 
-  useEffect(
-    () =>
-      onRenameRequest(() => {
-        const input = ref.current
-        if (!input) return
-        input.focus()
-        // Like Finder: select the name but not the extension.
-        input.setSelectionRange(0, isFile ? extensionStart(input.value) : input.value.length)
-      }),
-    [isFile],
-  )
+  useEffect(() => onRenameRequest(() => setDraft(stored)), [stored])
 
-  const save = () => {
-    if (value.trim() !== stored) void renameClip(clip.id, value)
+  const editing = draft !== null
+  useLayoutEffect(() => {
+    const el = input.current
+    if (!editing || !el) return
+    el.focus()
+    el.setSelectionRange(0, isFile ? extensionStart(el.value) : el.value.length)
+  }, [editing, isFile])
+
+  const commit = () => {
+    if (draft === null) return
+    setDraft(null)
+    if (cancelled.current) return void (cancelled.current = false)
+    const next = draft.trim()
+    // An emptied file name keeps the old one; an emptied title goes back to the derived label.
+    if (next !== stored && (next || !isFile)) void renameClip(clip.id, next)
   }
 
+  const box = "-ml-2 h-8 min-w-0 rounded-md px-2 text-title font-medium"
+
+  if (editing) {
+    return (
+      <input
+        ref={input}
+        value={draft}
+        aria-label={isFile ? "File name" : "Title"}
+        spellCheck={!isFile}
+        placeholder={isFile ? "Name" : clipLabel({ ...clip, title: "" })}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") e.currentTarget.blur()
+          if (e.key === "Escape") {
+            e.stopPropagation()
+            cancelled.current = true
+            e.currentTarget.blur()
+          }
+        }}
+        className={cn(box, "w-full flex-1 bg-background ring-1 ring-ring outline-none placeholder:text-subtle")}
+      />
+    )
+  }
+
+  const split = isFile ? extensionStart(stored) : stored.length
   return (
-    <input
-      ref={ref}
-      value={value}
-      aria-label={isFile ? "File name" : "Title"}
-      onChange={(e) => setValue(e.target.value)}
-      onBlur={save}
-      onKeyDown={(e) => {
-        if (e.key === "Enter") e.currentTarget.blur()
-        if (e.key === "Escape") {
-          setValue(stored)
-          requestAnimationFrame(() => ref.current?.blur())
-        }
-      }}
-      placeholder={isFile ? "Name" : clipLabel({ ...clip, title: "" })}
-      spellCheck={!isFile}
-      className="min-w-0 flex-1 truncate bg-transparent text-title font-medium outline-none placeholder:text-foreground/80 focus:placeholder:text-subtle"
-    />
+    <div className="flex min-w-0 flex-1">
+      <button
+        type="button"
+        onClick={() => setDraft(stored)}
+        className={cn(box, "group/name flex max-w-full items-center gap-2 text-left transition-colors hover:bg-accent/70")}
+      >
+        {isFile ? (
+          <span className="flex min-w-0">
+            <span className="truncate">{stored.slice(0, split)}</span>
+            <span className="shrink-0 text-subtle">{stored.slice(split)}</span>
+          </span>
+        ) : (
+          <span className={cn("truncate", !clip.title && "text-foreground/80")}>{clipLabel(clip)}</span>
+        )}
+        <PencilLine className="size-3.5 shrink-0 text-subtle opacity-0 transition-opacity group-hover/name:opacity-100" />
+      </button>
+    </div>
+  )
+}
+
+/** Shows a check when the clip is copied by any route (button, ↵, menu), at a fixed width so nothing shifts. */
+function CopyButton({ clip }: { clip: Clip }) {
+  const actions = useActions()
+  const [seen, setSeen] = useState(clip.copiedAt)
+  const copied = clip.copiedAt !== seen
+  useEffect(() => {
+    if (!copied) return
+    const timer = setTimeout(() => setSeen(clip.copiedAt), 1400)
+    return () => clearTimeout(timer)
+  }, [copied, clip.copiedAt])
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button size="sm" className="ml-1.5" onClick={() => void actions.copy([clip.id])}>
+          {copied ? <Check key="check" className="animate-in duration-200 zoom-in-50" /> : <Copy key="copy" />}
+          <span className="grid *:col-start-1 *:row-start-1">
+            <span className={cn(copied && "invisible")}>Copy</span>
+            <span className={cn(!copied && "invisible")}>Copied</span>
+          </span>
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent>
+        Copy <Kbd>↵</Kbd>
+      </TooltipContent>
+    </Tooltip>
   )
 }
 
@@ -140,11 +204,11 @@ function ClipDetail({ clip }: { clip: Clip }) {
   useEffect(() => onEditRequest(() => setEditing(true)), [])
 
   return (
-    <div className="flex h-full min-w-0 flex-col">
-      <header className="flex h-12 shrink-0 items-center gap-2.5 border-b pr-2.5 pl-5">
+    <div className="flex h-full min-w-0 animate-in flex-col duration-150 fade-in-50 motion-reduce:animate-none">
+      <header className="flex h-12 shrink-0 items-center gap-3 border-b pr-3 pl-5">
         <ClipThumb clip={clip} />
-        <TitleInput key={storedName(clip)} clip={clip} />
-        <div className="flex items-center">
+        <NameField clip={clip} />
+        <div className="flex shrink-0 items-center gap-0.5">
           {inTrash ? (
             <>
               <Button variant="ghost" size="sm" onClick={() => void actions.restore([clip.id])}>
@@ -170,12 +234,7 @@ function ClipDetail({ clip }: { clip: Clip }) {
               <IconAction label="Move to trash" keys="⌫" onClick={() => void actions.trash([clip.id])}>
                 <Trash2 />
               </IconAction>
-              {!isDownloadOnly(clip) && (
-                <Button size="sm" className="ml-1.5" onClick={() => void actions.copy([clip.id])}>
-                  <Copy /> Copy
-                  <Kbd className="-mr-1 bg-white/15 text-primary-foreground">↵</Kbd>
-                </Button>
-              )}
+              {!isDownloadOnly(clip) && <CopyButton clip={clip} />}
             </>
           )}
         </div>
@@ -205,7 +264,7 @@ function Toolbar({ clip, editing, onEditingChange }: { clip: Clip } & ModeProps)
   const space = spaces.find((s) => s.id === clip.spaceId)
 
   return (
-    <div className="flex h-10 shrink-0 items-center gap-1 border-b px-3.5">
+    <div className="flex h-10 shrink-0 items-center gap-1 border-b px-3">
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" size="xs" className="text-muted-foreground">
@@ -251,8 +310,28 @@ function Toolbar({ clip, editing, onEditingChange }: { clip: Clip } & ModeProps)
         </>
       )}
 
+      {isFileClip(clip) && (
+        <>
+          <span className="h-3.5 w-px bg-border" />
+          <span className="px-2 text-caption text-muted-foreground">
+            {kindLabel(clip.kind)}
+            {fileExtension(clip.file.name) && <span className="text-subtle"> · {fileExtension(clip.file.name)}</span>}
+          </span>
+        </>
+      )}
+
       {!isFileClip(clip) && (clip.kind === "markdown" || clip.kind === "code" || clip.kind === "json") && (
-        <ModeToggle editing={editing} onChange={onEditingChange} />
+        <div className="ml-auto">
+          <Segmented<"preview" | "edit">
+            label="Mode"
+            value={editing ? "edit" : "preview"}
+            onChange={(mode) => onEditingChange(mode === "edit")}
+            options={[
+              { value: "preview", label: "Preview", icon: Eye },
+              { value: "edit", label: "Edit", icon: PencilLine },
+            ]}
+          />
+        </div>
       )}
     </div>
   )
@@ -301,30 +380,6 @@ function LanguagePicker({ clip }: { clip: TextClip }) {
   )
 }
 
-function ModeToggle({ editing, onChange }: { editing: boolean; onChange: (editing: boolean) => void }) {
-  return (
-    <div className="ml-auto flex items-center rounded-md bg-muted p-0.5">
-      {[
-        { value: false, label: "Preview", icon: Eye },
-        { value: true, label: "Edit", icon: PencilLine },
-      ].map(({ value, label, icon: Icon }) => (
-        <button
-          key={label}
-          type="button"
-          onClick={() => onChange(value)}
-          className={cn(
-            "flex h-5.5 items-center gap-1 rounded-[5px] px-2 text-caption transition-colors",
-            editing === value ? "bg-background text-foreground shadow-xs dark:bg-accent" : "text-muted-foreground hover:text-foreground",
-          )}
-        >
-          <Icon className="size-3" />
-          {label}
-        </button>
-      ))}
-    </div>
-  )
-}
-
 function Body({ clip, editing }: { clip: Clip; editing: boolean }) {
   if (isFileClip(clip)) {
     switch (clip.kind) {
@@ -337,7 +392,7 @@ function Body({ clip, editing }: { clip: Clip; editing: boolean }) {
         return <PdfView clip={clip} />
       case "file":
         return (
-          <div className="px-6 py-8">
+          <div className="p-5">
             <FileCard clip={clip} />
           </div>
         )
@@ -371,7 +426,7 @@ function Meta({ clip }: { clip: Clip }) {
   ].filter((item) => item !== null)
 
   return (
-    <footer className="flex h-9 shrink-0 items-center gap-4 overflow-hidden border-t px-5 text-caption whitespace-nowrap text-subtle">
+    <footer className="flex h-10 shrink-0 items-center gap-5 overflow-hidden border-t px-5 text-caption whitespace-nowrap text-subtle">
       {items.map(([label, value]) => (
         <span key={label}>
           {label} <span className="text-muted-foreground">{value}</span>
@@ -517,7 +572,7 @@ function EmptyDetail() {
   ]
   return (
     <div className="flex h-full flex-col items-center justify-center gap-6 p-8">
-      <ClipboardPaste className="size-6 text-faint" strokeWidth={1.5} />
+      <ClipboardPaste className="size-6 stroke-[1.5] text-faint" />
       <div className="grid grid-cols-[auto_1fr] items-center gap-x-4 gap-y-2.5 text-detail">
         {rows.map(([keys, label]) => (
           <div key={label} className="contents">

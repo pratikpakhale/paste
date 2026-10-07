@@ -1,5 +1,5 @@
 import * as React from "react"
-import { cn } from "cn"
+import { cn } from "@/lib/utils"
 import { Dialog as DialogPrimitive } from "radix-ui"
 
 import { Button } from "@/components/ui/button"
@@ -99,7 +99,7 @@ function DialogTitle({ className, ...props }: React.ComponentProps<typeof Dialog
   return (
     <DialogPrimitive.Title
       data-slot="dialog-title"
-      className={cn("font-heading text-base leading-none font-medium", className)}
+      className={cn("font-heading text-title leading-none font-medium", className)}
       {...props}
     />
   )

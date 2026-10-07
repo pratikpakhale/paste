@@ -78,7 +78,7 @@ export function TextEditor({ clip, mono, autoFocus }: { clip: TextClip; mono?: b
         }
       }}
       className={cn(
-        "block [field-sizing:content] min-h-full w-full resize-none bg-transparent px-6 py-5 outline-none placeholder:text-subtle",
+        "block [field-sizing:content] min-h-full w-full resize-none bg-transparent px-5 py-5 outline-none placeholder:text-subtle",
         mono ? "font-mono text-detail leading-[1.6]" : "text-title leading-[1.65]",
       )}
       placeholder="Empty"
@@ -100,7 +100,7 @@ export function CodeView({ code, language }: { code: string; language?: string }
     }
   }, [code, language, key, tooBig])
 
-  const className = "selectable px-6 py-5 font-mono text-detail leading-[1.6] [&_pre]:whitespace-pre-wrap [&_pre]:break-words"
+  const className = "selectable px-5 py-5 font-mono text-detail leading-[1.6] [&_pre]:whitespace-pre-wrap [&_pre]:break-words"
   if (html && html.for === key) return <div className={className} dangerouslySetInnerHTML={{ __html: html.html }} />
   return (
     <div className={className}>
@@ -119,7 +119,7 @@ const MARKDOWN_COMPONENTS: Components = {
 
 export function MarkdownView({ text }: { text: string }) {
   return (
-    <div className="selectable prose prose-sm max-w-none px-6 py-5 text-title dark:prose-invert prose-headings:font-semibold prose-headings:tracking-tight prose-a:text-primary prose-code:before:content-none prose-code:after:content-none prose-pre:bg-muted prose-pre:text-foreground">
+    <div className="selectable prose prose-sm max-w-none px-5 py-5 text-title dark:prose-invert prose-headings:font-semibold prose-headings:tracking-tight prose-a:text-primary prose-code:before:content-none prose-code:after:content-none prose-pre:bg-muted prose-pre:text-foreground">
       <ReactMarkdown remarkPlugins={[remarkGfm]} components={MARKDOWN_COMPONENTS}>
         {text}
       </ReactMarkdown>
@@ -138,7 +138,7 @@ export function JsonView({ clip }: { clip: TextClip }) {
 
   return (
     <div>
-      {pretty === null && <p className="px-6 pt-4 text-detail text-destructive">Invalid JSON — showing as-is.</p>}
+      {pretty === null && <p className="px-5 pt-4 text-detail text-destructive">Invalid JSON — showing as-is.</p>}
       {pretty !== null && pretty !== clip.text && (
         <div className="flex justify-end px-4 pt-3">
           <Button variant="outline" size="xs" onClick={() => void updateClip(clip.id, { text: pretty })}>
@@ -154,7 +154,7 @@ export function JsonView({ clip }: { clip: TextClip }) {
 export function LinkView({ clip }: { clip: TextClip }) {
   const url = URL.parse(clip.text.trim())
   return (
-    <div className="flex flex-col gap-4 px-6 py-5">
+    <div className="flex flex-col gap-4 px-5 py-5">
       <a
         href={url?.href}
         target="_blank"
@@ -170,7 +170,7 @@ export function LinkView({ clip }: { clip: TextClip }) {
         </span>
         <ExternalLink className="size-4 text-subtle transition-colors group-hover:text-foreground" />
       </a>
-      <div className="-mx-6 border-t">
+      <div className="-mx-5 border-t">
         <TextEditor clip={clip} mono />
       </div>
     </div>
@@ -196,7 +196,7 @@ export function ColorView({ clip }: { clip: TextClip }) {
   const resolved = useMemo(() => resolveColor(value), [value])
 
   return (
-    <div className="flex flex-col gap-5 px-6 py-5">
+    <div className="flex flex-col gap-5 px-5 py-5">
       <div className="checkerboard overflow-hidden rounded-xl border">
         <div className="h-44" style={{ background: value }} />
       </div>
@@ -219,7 +219,7 @@ export function ColorView({ clip }: { clip: TextClip }) {
           ))}
         </div>
       )}
-      <div className="-mx-6 border-t">
+      <div className="-mx-5 border-t">
         <TextEditor clip={clip} mono />
       </div>
     </div>
@@ -231,13 +231,21 @@ export function ImageView({ clip }: { clip: FileClip }) {
   const [zoom, setZoom] = useState(false)
   if (!url) return null
   return (
-    <div className="flex h-full flex-col p-4">
+    <div className="flex h-full flex-col p-5">
       <button
         type="button"
         onClick={() => setZoom(true)}
-        className="checkerboard group relative flex min-h-0 flex-1 cursor-zoom-in items-center justify-center overflow-hidden rounded-lg border"
+        className="group relative flex min-h-0 flex-1 cursor-zoom-in items-center justify-center rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
       >
-        <img src={url} alt={clip.file.name} className="max-h-full max-w-full object-contain" draggable={false} />
+        {/* The frame hugs the image; width/height give it the right aspect ratio before the pixels decode. */}
+        <img
+          src={url}
+          alt={clip.file.name}
+          width={clip.file.width}
+          height={clip.file.height}
+          draggable={false}
+          className="checkerboard h-auto max-h-full w-auto max-w-full animate-in rounded-lg object-contain ring-1 ring-border duration-200 fade-in-0 motion-reduce:animate-none"
+        />
         <span className="absolute top-2 right-2 flex size-7 items-center justify-center rounded-md bg-background/80 opacity-0 backdrop-blur transition-opacity group-hover:opacity-100">
           <Maximize2 className="size-3.5" />
         </span>
@@ -261,13 +269,13 @@ export function MediaView({ clip }: { clip: FileClip }) {
   if (!url) return null
   if (clip.kind === "video") {
     return (
-      <div className="flex h-full items-center justify-center p-4">
+      <div className="flex h-full items-center justify-center p-5">
         <video src={url} controls className="max-h-full max-w-full rounded-lg border bg-black" />
       </div>
     )
   }
   return (
-    <div className="flex flex-col gap-4 px-6 py-8">
+    <div className="flex flex-col gap-4 p-5">
       <FileCard clip={clip} />
       <audio src={url} controls className="w-full" />
     </div>
@@ -288,7 +296,7 @@ export function FileCard({ clip }: { clip: FileClip }) {
   return (
     <div className="flex items-center gap-3 rounded-lg border bg-card p-3.5">
       <span className="flex size-10 shrink-0 items-center justify-center rounded-md bg-muted">
-        <Icon className="size-5 text-muted-foreground" strokeWidth={1.5} />
+        <Icon className="size-5 stroke-[1.5] text-muted-foreground" />
       </span>
       <span className="flex min-w-0 flex-1 flex-col">
         <span className="truncate font-medium">{clip.file.name}</span>

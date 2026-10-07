@@ -3,31 +3,32 @@ import { useBlobUrl } from "@/hooks/use-blob-url"
 import { cn } from "@/lib/utils"
 import { KIND_ICON } from "./kind-icons"
 
-/** The small leading visual of a row: a real thumbnail or swatch where possible, else the kind icon. */
+/**
+ * The leading visual of a row: a thumbnail or swatch where possible, else the kind icon. Always the same box,
+ * so labels line up across kinds and nothing moves when a thumbnail finishes loading. Size it with `className`.
+ */
 export function ClipThumb({ clip, className }: { clip: Clip; className?: string }) {
   const thumbId = isFileClip(clip) && clip.kind === "image" ? (clip.thumbId ?? clip.blobId) : isFileClip(clip) ? clip.thumbId : undefined
   const url = useBlobUrl(thumbId)
-
-  if (clip.kind === "color" && !isFileClip(clip)) {
-    return (
-      <span
-        className={cn("size-5.5 shrink-0 rounded-[5px] shadow-[inset_0_0_0_1px_oklch(0_0_0/0.12)]", className)}
-        style={{ background: clip.text.trim() }}
-      />
-    )
-  }
-  if (url) {
-    return (
-      <img
-        src={url}
-        alt=""
-        draggable={false}
-        className={cn("size-5.5 shrink-0 rounded-[4px] object-cover shadow-[0_0_0_1px_var(--border)]", className)}
-      />
-    )
-  }
   const Icon = KIND_ICON[clip.kind]
-  return <Icon className={cn("size-4 shrink-0 text-subtle", className)} strokeWidth={1.75} />
+
+  return (
+    <span className={cn("relative flex size-5 shrink-0 items-center justify-center overflow-hidden rounded-[5px]", className)}>
+      {clip.kind === "color" && !isFileClip(clip) ? (
+        <span className="size-full shadow-[inset_0_0_0_1px_oklch(0_0_0/0.12)]" style={{ background: clip.text.trim() }} />
+      ) : url ? (
+        <img
+          src={url}
+          alt=""
+          draggable={false}
+          className="size-full animate-in object-cover duration-200 fade-in-0 motion-reduce:animate-none"
+        />
+      ) : (
+        <Icon className="size-[80%] text-subtle" />
+      )}
+      {url && <span className="pointer-events-none absolute inset-0 rounded-[inherit] shadow-[inset_0_0_0_1px_var(--border)]" />}
+    </span>
+  )
 }
 
 const SPACE_COLORS = [

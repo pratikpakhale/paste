@@ -5,7 +5,7 @@ import { type CSSProperties, memo, type MouseEvent } from "react"
 import { cn } from "@/lib/utils"
 import { type Clip, isFileClip } from "@/db/schema"
 import { useBlobUrl } from "@/hooks/use-blob-url"
-import { clipDetail, clipLabel, formatAgo } from "@/lib/format"
+import { clipDetail, clipLabel, formatAgoShort } from "@/lib/format"
 import { ClipMenu } from "./clip-menu"
 import { ClipThumb, SpaceDot } from "./clip-visual"
 import { KIND_ICON } from "./kind-icons"
@@ -57,7 +57,13 @@ export const ClipItem = memo(function ClipItem(props: ClipItemProps) {
         aria-selected={props.selected}
         onClick={(e) => onSelect(clip.id, e)}
         onDoubleClick={() => onOpen(clip.id)}
-        className={cn("outline-none", layout === "list" && "clip-row", (isDragging || dragging) && "opacity-40", isDragging && "z-10")}
+        className={cn(
+          // Opacity only: dnd-kit owns this element's transform.
+          "animate-in fade-in-0 outline-none motion-reduce:animate-none",
+          layout === "list" && "clip-row",
+          (isDragging || dragging) && "opacity-40",
+          isDragging && "z-10",
+        )}
       >
         <Body {...props} />
       </div>
@@ -82,24 +88,25 @@ function RowBody({ clip, selected, isCursor, position, queuedNext, spaceName, ti
   return (
     <div
       className={cn(
-        "group relative mx-2 flex h-9 cursor-default items-center gap-2.5 rounded-md px-2.5 transition-colors duration-75",
+        "group mx-2 flex h-9 cursor-default items-center gap-3 rounded-md px-3 transition-colors duration-75",
         selected ? "bg-selected" : "hover:bg-accent/60",
+        // In a multi-selection, mark the one the keyboard moves from.
+        isCursor && position !== null && "ring-1 ring-primary/30 ring-inset",
       )}
     >
-      {isCursor && selected && <span className="absolute inset-y-2 left-0 w-0.5 rounded-full bg-primary" />}
       <ClipThumb clip={clip} />
-      <span className="min-w-0 shrink truncate text-foreground">{clipLabel(clip)}</span>
+      <span className="min-w-0 shrink truncate">{clipLabel(clip)}</span>
       <span className="min-w-0 flex-1 truncate text-detail text-subtle">{clipDetail(clip)}</span>
       {queuedNext && <span className="text-caption font-medium text-primary">next</span>}
       {position !== null && <Position value={position} active={queuedNext} />}
       {spaceName && clip.spaceId && (
-        <span className="hidden max-w-28 shrink-0 items-center gap-1.5 truncate rounded-full border px-2 py-px text-caption text-muted-foreground @[600px]:flex">
+        <span className="hidden h-5 max-w-32 shrink-0 items-center gap-1.5 rounded-full border px-2 text-caption text-muted-foreground @[36rem]:flex">
           <SpaceDot id={clip.spaceId} className="size-1.5" />
           <span className="truncate">{spaceName}</span>
         </span>
       )}
-      {clip.pinned && <Pin className="size-3 shrink-0 rotate-45 text-subtle" />}
-      <span className="w-11 shrink-0 text-right text-caption text-subtle tabular-nums">{formatAgo(timestamp)}</span>
+      {clip.pinned && <Pin className="size-3.5 shrink-0 rotate-45 text-subtle" />}
+      <span className="w-12 shrink-0 text-right text-caption whitespace-nowrap text-subtle tabular-nums">{formatAgoShort(timestamp)}</span>
     </div>
   )
 }
@@ -126,7 +133,7 @@ function CardPreview({ clip }: { clip: Clip }) {
       const link = URL.parse(clip.text.trim())
       return (
         <div className="flex size-full flex-col justify-end gap-0.5 p-3">
-          <span className="truncate text-base font-medium">{link?.hostname.replace(/^www\./, "") ?? clip.text}</span>
+          <span className="truncate font-medium">{link?.hostname.replace(/^www\./, "") ?? clip.text}</span>
           <span className="truncate text-caption text-subtle">{link?.pathname}</span>
         </div>
       )
@@ -147,7 +154,7 @@ function CardPreview({ clip }: { clip: Clip }) {
   const ext = clip.file.name.split(".").pop()?.toUpperCase()
   return (
     <div className="flex size-full flex-col items-center justify-center gap-2 text-subtle">
-      <Icon className="size-7" strokeWidth={1.25} />
+      <Icon className="size-7 stroke-[1.25]" />
       {ext && ext.length <= 5 && <span className="text-micro font-medium tracking-wide">{ext}</span>}
     </div>
   )
@@ -173,10 +180,10 @@ function CardBody({ clip, selected, isCursor, position, queuedNext, timestamp }:
           {position !== null && <Position value={position} active={queuedNext} />}
         </div>
       </div>
-      <div className="flex h-9 items-center gap-2 px-2.5">
-        <ClipThumb clip={clip} className="size-3.5" />
+      <div className="flex h-10 items-center gap-2.5 px-3">
+        <ClipThumb clip={clip} className="size-4" />
         <span className="min-w-0 flex-1 truncate text-detail">{clipLabel(clip)}</span>
-        <span className="shrink-0 text-caption text-subtle tabular-nums">{formatAgo(timestamp)}</span>
+        <span className="shrink-0 text-caption whitespace-nowrap text-subtle tabular-nums">{formatAgoShort(timestamp)}</span>
       </div>
     </div>
   )

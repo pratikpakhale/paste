@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { extensionStart, resolveFileName } from "./format"
+import { extensionStart, formatAgoShort, resolveFileName } from "./format"
 
 describe("extensionStart", () => {
   test.each([
@@ -27,5 +27,18 @@ describe("resolveFileName", () => {
   })
   test("names without an extension stay without one", () => {
     expect(resolveFileName("Makefile", "build")).toBe("Makefile")
+  })
+})
+
+describe("formatAgoShort", () => {
+  const now = Date.UTC(2026, 9, 7, 12)
+  test.each([
+    [10_000, "now"],
+    [31 * 60_000, "31m"],
+    [5 * 3_600_000 + 59 * 60_000, "5h"],
+    [3 * 86_400_000, "3d"],
+  ])("%p ms ago is %p", (ago, label) => expect(formatAgoShort(now - ago, now)).toBe(label))
+  test("older than a week shows the date", () => {
+    expect(formatAgoShort(now - 30 * 86_400_000, now)).not.toMatch(/^\d+[mhd]$/)
   })
 })

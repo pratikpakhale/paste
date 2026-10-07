@@ -1,4 +1,4 @@
-import { ArrowDownUp, LayoutGrid, List, PanelLeft, Plus, Search, Trash2, X } from "lucide-react"
+import { ArrowDownUp, LayoutGrid, List, Plus, Search, Trash2, X } from "lucide-react"
 import { useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import {
@@ -10,13 +10,14 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Kbd } from "@/components/ui/kbd"
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { onSearchRequest } from "@/lib/ui-events"
+import { cn } from "@/lib/utils"
 import { useActions } from "@/state/actions"
 import { useData } from "@/state/data"
 import { type Layout, type SortMode, useUi } from "@/state/ui"
 import { SpaceDot } from "./clip-visual"
+import { Segmented } from "./segmented"
 import { viewTitle } from "./views"
 
 const SORTS: { value: SortMode; label: string }[] = [
@@ -40,34 +41,23 @@ export function ListHeader() {
 
   const inTrash = view.type === "trash"
 
+  // With the sidebar hidden, the fixed SidebarToggle sits over this header's left edge, so the title makes room.
   return (
-    <header className="flex h-12 shrink-0 items-center gap-2 border-b pr-2.5 pl-2.5">
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            aria-label={sidebarOpen ? "Hide sidebar" : "Show sidebar"}
-            onClick={() => useUi.getState().setSidebarOpen(!sidebarOpen)}
-            className="text-muted-foreground"
-          >
-            <PanelLeft />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>
-          {sidebarOpen ? "Hide sidebar" : "Show sidebar"}
-          <Kbd>[</Kbd>
-        </TooltipContent>
-      </Tooltip>
+    <header
+      className={cn(
+        "flex h-12 shrink-0 items-center gap-3 border-b pr-3 transition-[padding] duration-200 ease-out motion-reduce:transition-none",
+        sidebarOpen ? "pl-5" : "pl-11",
+      )}
+    >
       <div className="flex min-w-0 items-center gap-2">
         {view.type === "space" && <SpaceDot id={view.id} />}
         <h1 className="truncate font-medium">{viewTitle(view, spaces)}</h1>
         <span className="text-subtle tabular-nums">{visible.length}</span>
       </div>
 
-      <div className="ml-auto flex items-center gap-1">
-        <label className="group flex h-7 w-44 items-center gap-1.5 rounded-md px-2 text-muted-foreground transition-[width,background-color] focus-within:w-60 focus-within:bg-accent hover:bg-accent/60">
-          <Search className="size-3.5 shrink-0" />
+      <div className="ml-auto flex items-center gap-1.5">
+        <label className="group flex h-7 w-48 items-center gap-2 rounded-md px-2 text-muted-foreground transition-colors focus-within:bg-accent hover:bg-accent/60">
+          <Search className="size-4 shrink-0" />
           <input
             ref={search}
             value={query}
@@ -92,7 +82,7 @@ export function ListHeader() {
               type="button"
               aria-label="Clear search"
               onClick={() => useUi.getState().setQuery("")}
-              className="text-subtle hover:text-foreground"
+              className="flex size-5 items-center justify-center rounded-sm text-subtle hover:text-foreground"
             >
               <X className="size-3.5" />
             </button>
@@ -142,20 +132,16 @@ export function ListHeader() {
               </DropdownMenuContent>
             </DropdownMenu>
 
-            <ToggleGroup
-              type="single"
-              size="sm"
+            <Segmented<Layout>
+              label="Layout"
+              iconOnly
               value={layout}
-              onValueChange={(v) => v && useUi.getState().setLayout(v as Layout)}
-              className="text-muted-foreground"
-            >
-              <ToggleGroupItem value="list" aria-label="List view" className="size-7 px-0">
-                <List />
-              </ToggleGroupItem>
-              <ToggleGroupItem value="grid" aria-label="Grid view" className="size-7 px-0">
-                <LayoutGrid />
-              </ToggleGroupItem>
-            </ToggleGroup>
+              onChange={(next) => useUi.getState().setLayout(next)}
+              options={[
+                { value: "list", label: "List view", icon: List },
+                { value: "grid", label: "Grid view", icon: LayoutGrid },
+              ]}
+            />
 
             <Tooltip>
               <TooltipTrigger asChild>

@@ -143,7 +143,23 @@ describe("app", () => {
       const [clip] = await liveClips()
       expect(clip && "file" in clip && clip.file.name).toBe("Receipt.zip")
     })
-    await waitFor(() => expect(screen.getByLabelText<HTMLInputElement>("File name").value).toBe("Receipt.zip"))
+    // Committing hands the header back to the name, read-only again.
+    await waitFor(() => expect(screen.queryByLabelText("File name")).toBeNull())
+    expect((await screen.findAllByText("Receipt.zip")).length).toBeGreaterThan(0)
+  })
+
+  test("escape cancels a rename", async () => {
+    await addClips([{ type: "file", file: new File(["PK"], "IMG_0142.zip", { type: "application/zip" }) }], null)
+    render(<Root />)
+    await screen.findAllByText("IMG_0142.zip")
+    press("j")
+    press("r")
+    const input = await screen.findByLabelText<HTMLInputElement>("File name")
+    fireEvent.change(input, { target: { value: "Nope" } })
+    fireEvent.keyDown(input, { key: "Escape" })
+    await waitFor(() => expect(screen.queryByLabelText("File name")).toBeNull())
+    const [clip] = await liveClips()
+    expect(clip && "file" in clip && clip.file.name).toBe("IMG_0142.zip")
   })
 
   test("rename from the palette keeps focus in the name field after it closes", async () => {

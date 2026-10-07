@@ -41,11 +41,11 @@ export function Composer() {
   return (
     <Dialog open={open} onOpenChange={(next) => !next && close()}>
       <DialogContent showCloseButton={false} className="top-[16%] translate-y-0 gap-0 p-0 sm:max-w-xl">
-        <DialogHeader className="flex-row items-center gap-2 border-b px-4 py-3">
-          <DialogTitle className="text-base font-medium">New clip</DialogTitle>
+        <DialogHeader className="h-12 flex-row items-center gap-2.5 border-b px-5">
+          <DialogTitle className="text-sm font-medium">New clip</DialogTitle>
           <DialogDescription className="sr-only">Write a clip. Its type is detected when saved.</DialogDescription>
           {view.type === "space" && (
-            <span className="flex items-center gap-1.5 rounded-full border px-2 py-px text-caption text-muted-foreground">
+            <span className="flex h-5 items-center gap-1.5 rounded-full border px-2 text-caption text-muted-foreground">
               <SpaceDot id={view.id} className="size-1.5" />
               {viewTitle(view, spaces)}
             </span>
@@ -62,15 +62,17 @@ export function Composer() {
             }
           }}
           placeholder="Write or paste… type is detected automatically"
-          className="[field-sizing:content] max-h-[55vh] min-h-48 resize-none bg-transparent px-4 py-3.5 text-title leading-relaxed outline-none placeholder:text-subtle"
+          className="[field-sizing:content] max-h-[55vh] min-h-48 resize-none bg-transparent px-5 py-4 text-title leading-relaxed outline-none placeholder:text-subtle"
         />
-        <div className="flex items-center justify-end gap-2 border-t px-3 py-2.5">
+        <div className="flex h-12 items-center gap-2 border-t pr-3 pl-5">
+          <span className="mr-auto flex items-center gap-1.5 text-caption text-subtle">
+            <Kbd>⌘↵</Kbd> to save
+          </span>
           <Button variant="ghost" size="sm" onClick={close}>
             Cancel
           </Button>
           <Button size="sm" disabled={!text.trim()} onClick={save}>
             Save
-            <Kbd className="-mr-1 bg-white/15 text-primary-foreground">⌘↵</Kbd>
           </Button>
         </div>
       </DialogContent>
@@ -282,7 +284,7 @@ export function DropZone() {
   return (
     <div className="pointer-events-none fixed inset-0 z-50 flex animate-in items-center justify-center bg-background/70 backdrop-blur-sm fade-in">
       <div className="flex flex-col items-center gap-3 rounded-2xl border-2 border-dashed border-primary/50 bg-card/80 px-14 py-10 shadow-2xl">
-        <ClipboardPaste className="size-7 text-primary" strokeWidth={1.5} />
+        <ClipboardPaste className="size-7 stroke-[1.5] text-primary" />
         <span className="text-title font-medium">Drop to add to {target}</span>
       </div>
     </div>
