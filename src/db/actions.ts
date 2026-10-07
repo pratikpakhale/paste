@@ -1,4 +1,5 @@
 import { detectLanguage } from "@/lib/code"
+import { resolveFileName } from "@/lib/format"
 import { classifyMime, classifyText, classifyTextFile } from "@/lib/detect"
 import { audioInfo, imageInfo, type MediaInfo, videoInfo } from "@/lib/media"
 import { keyAtEnd, keysAtTop, type MoveUpdate } from "@/lib/order"
@@ -99,10 +100,24 @@ export async function addClips(inputs: ClipInput[], spaceId: string | null): Pro
   })
 }
 
-type EditableFields = Pick<TextClip, "title" | "text" | "kind" | "language">
+type EditableFields = Pick<TextClip, "text" | "kind" | "language">
 
 export async function updateClip(id: string, changes: Partial<EditableFields>) {
   await db.clips.update(id, { ...changes, updatedAt: Date.now() })
+}
+
+/**
+ * Renaming a file clip renames the file itself, so downloads, backups and search use the new name.
+ * Text clips have no file, so their name is the title.
+ */
+export async function renameClip(id: string, name: string) {
+  await db.clips.update(id, (clip) => {
+    if (isFileClip(clip)) {
+      clip.file = { ...clip.file, name: resolveFileName(name, clip.file.name) }
+      clip.title = ""
+    } else clip.title = name.trim()
+    clip.updatedAt = Date.now()
+  })
 }
 
 export async function applyMove(updates: MoveUpdate[]) {

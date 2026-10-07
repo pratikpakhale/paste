@@ -124,7 +124,7 @@ function Preview({ active, moving }: { active: Active; moving: string[] }) {
         <ClipThumb clip={clip} />
         <span className="truncate">{clipLabel(clip)}</span>
         {moving.length > 1 && (
-          <span className="ml-1 rounded-full bg-primary px-1.5 text-[10px] font-medium text-primary-foreground tabular-nums">
+          <span className="ml-1 rounded-full bg-primary px-1.5 text-micro font-medium text-primary-foreground tabular-nums">
             {moving.length}
           </span>
         )}

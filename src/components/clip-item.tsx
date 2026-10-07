@@ -69,7 +69,7 @@ function Position({ value, active }: { value: number; active?: boolean }) {
   return (
     <span
       className={cn(
-        "flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-medium tabular-nums",
+        "flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-micro font-medium tabular-nums",
         active ? "bg-primary text-primary-foreground" : "bg-primary/15 text-primary",
       )}
     >
@@ -89,17 +89,17 @@ function RowBody({ clip, selected, isCursor, position, queuedNext, spaceName, ti
       {isCursor && selected && <span className="absolute inset-y-2 left-0 w-0.5 rounded-full bg-primary" />}
       <ClipThumb clip={clip} />
       <span className="min-w-0 shrink truncate text-foreground">{clipLabel(clip)}</span>
-      <span className="min-w-0 flex-1 truncate text-[12px] text-subtle">{clipDetail(clip)}</span>
-      {queuedNext && <span className="text-[11px] font-medium text-primary">next</span>}
+      <span className="min-w-0 flex-1 truncate text-detail text-subtle">{clipDetail(clip)}</span>
+      {queuedNext && <span className="text-caption font-medium text-primary">next</span>}
       {position !== null && <Position value={position} active={queuedNext} />}
       {spaceName && clip.spaceId && (
-        <span className="hidden max-w-28 shrink-0 items-center gap-1.5 truncate rounded-full border px-2 py-px text-[11px] text-muted-foreground @[560px]:flex">
+        <span className="hidden max-w-28 shrink-0 items-center gap-1.5 truncate rounded-full border px-2 py-px text-caption text-muted-foreground @[600px]:flex">
           <SpaceDot id={clip.spaceId} className="size-1.5" />
           <span className="truncate">{spaceName}</span>
         </span>
       )}
       {clip.pinned && <Pin className="size-3 shrink-0 rotate-45 text-subtle" />}
-      <span className="w-11 shrink-0 text-right text-[11px] text-subtle tabular-nums">{formatAgo(timestamp)}</span>
+      <span className="w-11 shrink-0 text-right text-caption text-subtle tabular-nums">{formatAgo(timestamp)}</span>
     </div>
   )
 }
@@ -126,8 +126,8 @@ function CardPreview({ clip }: { clip: Clip }) {
       const link = URL.parse(clip.text.trim())
       return (
         <div className="flex size-full flex-col justify-end gap-0.5 p-3">
-          <span className="truncate text-[13px] font-medium">{link?.hostname.replace(/^www\./, "") ?? clip.text}</span>
-          <span className="truncate text-[11px] text-subtle">{link?.pathname}</span>
+          <span className="truncate text-base font-medium">{link?.hostname.replace(/^www\./, "") ?? clip.text}</span>
+          <span className="truncate text-caption text-subtle">{link?.pathname}</span>
         </div>
       )
     }
@@ -135,8 +135,8 @@ function CardPreview({ clip }: { clip: Clip }) {
     return (
       <div
         className={cn(
-          "size-full overflow-hidden [mask-image:linear-gradient(to_bottom,black_60%,transparent)] p-3 text-[11px] leading-[1.45] whitespace-pre-wrap text-muted-foreground",
-          mono ? "font-mono text-[10.5px]" : "break-words",
+          "size-full overflow-hidden [mask-image:linear-gradient(to_bottom,black_60%,transparent)] p-3 text-caption leading-[1.45] whitespace-pre-wrap text-muted-foreground",
+          mono ? "font-mono text-micro" : "break-words",
         )}
       >
         {clip.text.slice(0, 600)}
@@ -148,7 +148,7 @@ function CardPreview({ clip }: { clip: Clip }) {
   return (
     <div className="flex size-full flex-col items-center justify-center gap-2 text-subtle">
       <Icon className="size-7" strokeWidth={1.25} />
-      {ext && ext.length <= 5 && <span className="text-[10px] font-medium tracking-wide">{ext}</span>}
+      {ext && ext.length <= 5 && <span className="text-micro font-medium tracking-wide">{ext}</span>}
     </div>
   )
 }
@@ -175,8 +175,8 @@ function CardBody({ clip, selected, isCursor, position, queuedNext, timestamp }:
       </div>
       <div className="flex h-9 items-center gap-2 px-2.5">
         <ClipThumb clip={clip} className="size-3.5" />
-        <span className="min-w-0 flex-1 truncate text-[12.5px]">{clipLabel(clip)}</span>
-        <span className="shrink-0 text-[11px] text-subtle tabular-nums">{formatAgo(timestamp)}</span>
+        <span className="min-w-0 flex-1 truncate text-detail">{clipLabel(clip)}</span>
+        <span className="shrink-0 text-caption text-subtle tabular-nums">{formatAgo(timestamp)}</span>
       </div>
     </div>
   )

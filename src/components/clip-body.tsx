@@ -79,7 +79,7 @@ export function TextEditor({ clip, mono, autoFocus }: { clip: TextClip; mono?: b
       }}
       className={cn(
         "block [field-sizing:content] min-h-full w-full resize-none bg-transparent px-6 py-5 outline-none placeholder:text-subtle",
-        mono ? "font-mono text-[12.5px] leading-[1.6]" : "text-[14px] leading-[1.65]",
+        mono ? "font-mono text-detail leading-[1.6]" : "text-title leading-[1.65]",
       )}
       placeholder="Empty"
     />
@@ -100,7 +100,7 @@ export function CodeView({ code, language }: { code: string; language?: string }
     }
   }, [code, language, key, tooBig])
 
-  const className = "selectable px-6 py-5 font-mono text-[12.5px] leading-[1.6] [&_pre]:whitespace-pre-wrap [&_pre]:break-words"
+  const className = "selectable px-6 py-5 font-mono text-detail leading-[1.6] [&_pre]:whitespace-pre-wrap [&_pre]:break-words"
   if (html && html.for === key) return <div className={className} dangerouslySetInnerHTML={{ __html: html.html }} />
   return (
     <div className={className}>
@@ -119,7 +119,7 @@ const MARKDOWN_COMPONENTS: Components = {
 
 export function MarkdownView({ text }: { text: string }) {
   return (
-    <div className="selectable prose prose-sm max-w-none px-6 py-5 text-[14px] dark:prose-invert prose-headings:font-semibold prose-headings:tracking-tight prose-a:text-primary prose-code:before:content-none prose-code:after:content-none prose-pre:bg-muted prose-pre:text-foreground">
+    <div className="selectable prose prose-sm max-w-none px-6 py-5 text-title dark:prose-invert prose-headings:font-semibold prose-headings:tracking-tight prose-a:text-primary prose-code:before:content-none prose-code:after:content-none prose-pre:bg-muted prose-pre:text-foreground">
       <ReactMarkdown remarkPlugins={[remarkGfm]} components={MARKDOWN_COMPONENTS}>
         {text}
       </ReactMarkdown>
@@ -138,7 +138,7 @@ export function JsonView({ clip }: { clip: TextClip }) {
 
   return (
     <div>
-      {pretty === null && <p className="px-6 pt-4 text-[12px] text-destructive">Invalid JSON — showing as-is.</p>}
+      {pretty === null && <p className="px-6 pt-4 text-detail text-destructive">Invalid JSON — showing as-is.</p>}
       {pretty !== null && pretty !== clip.text && (
         <div className="flex justify-end px-4 pt-3">
           <Button variant="outline" size="xs" onClick={() => void updateClip(clip.id, { text: pretty })}>
@@ -161,12 +161,12 @@ export function LinkView({ clip }: { clip: TextClip }) {
         rel="noreferrer"
         className="group flex items-center gap-3 rounded-lg border bg-card p-3.5 transition-colors hover:border-foreground/15"
       >
-        <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-muted text-[15px] font-semibold text-muted-foreground uppercase">
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-muted text-title font-semibold text-muted-foreground uppercase">
           {url?.hostname.replace(/^www\./, "")[0] ?? "?"}
         </span>
         <span className="flex min-w-0 flex-1 flex-col">
           <span className="truncate font-medium">{url?.hostname.replace(/^www\./, "") ?? clip.text}</span>
-          <span className="truncate text-[12px] text-subtle">{url ? `${url.pathname}${url.search}${url.hash}` : ""}</span>
+          <span className="truncate text-detail text-subtle">{url ? `${url.pathname}${url.search}${url.hash}` : ""}</span>
         </span>
         <ExternalLink className="size-4 text-subtle transition-colors group-hover:text-foreground" />
       </a>
@@ -213,8 +213,8 @@ export function ColorView({ clip }: { clip: TextClip }) {
               onClick={() => copy(text!)}
               className="flex flex-col items-start gap-0.5 rounded-md border px-3 py-2 text-left transition-colors hover:bg-accent"
             >
-              <span className="text-[11px] text-subtle">{label}</span>
-              <span className="w-full truncate font-mono text-[12px]">{text}</span>
+              <span className="text-caption text-subtle">{label}</span>
+              <span className="w-full truncate font-mono text-detail">{text}</span>
             </button>
           ))}
         </div>
@@ -292,7 +292,7 @@ export function FileCard({ clip }: { clip: FileClip }) {
       </span>
       <span className="flex min-w-0 flex-1 flex-col">
         <span className="truncate font-medium">{clip.file.name}</span>
-        <span className="truncate text-[12px] text-subtle">
+        <span className="truncate text-detail text-subtle">
           {formatBytes(clip.file.size)} · {clip.file.mime}
         </span>
       </span>

@@ -29,8 +29,11 @@ function plural(n: number, word: string) {
 /** Creates a space, opens it and starts renaming it. */
 export async function newSpace() {
   const id = await createSpace("New space")
-  useUi.getState().setView({ type: "space", id })
-  useUi.getState().setRenamingSpace(id)
+  const ui = useUi.getState()
+  // The name is edited inline in the sidebar, so it has to be showing.
+  ui.setSidebarOpen(true)
+  ui.setView({ type: "space", id })
+  ui.setRenamingSpace(id)
 }
 
 function reportError(error: unknown) {

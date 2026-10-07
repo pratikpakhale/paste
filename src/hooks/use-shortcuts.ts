@@ -134,6 +134,8 @@ export function useShortcuts(actions: Actions) {
   useHotkeys("alt+shift+up", () => void actions.nudge("top"), opts, [actions])
   useHotkeys("alt+shift+down", () => void actions.nudge("bottom"), opts, [actions])
 
+  useHotkeys(["bracketleft", "mod+backslash"], () => ui().setSidebarOpen(!ui().sidebarOpen), opts)
+
   useHotkeys("g>a", () => ui().setView({ type: "all" }), opts)
   useHotkeys("g>p", () => ui().setView({ type: "pinned" }), opts)
   useHotkeys("g>t", () => ui().setView({ type: "trash" }), opts)

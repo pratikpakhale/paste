@@ -102,7 +102,7 @@ export function ClipList() {
     >
       <SortableContext items={ids} strategy={layout === "grid" ? rectSortingStrategy : verticalListSortingStrategy}>
         {layout === "grid" ? (
-          <div className="grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-3 p-4">{visible.map(item)}</div>
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(14rem,1fr))] gap-3 p-4">{visible.map(item)}</div>
         ) : (
           <div className="py-1.5">
             {visible.map((clip, i) => (
@@ -120,7 +120,7 @@ export function ClipList() {
 }
 
 function SectionLabel({ children, className }: { children: string; className?: string }) {
-  return <div className={`px-4.5 pt-1 pb-1.5 text-[11px] font-medium text-subtle ${className ?? ""}`}>{children}</div>
+  return <div className={`px-4.5 pt-1 pb-1.5 text-caption font-medium text-subtle ${className ?? ""}`}>{children}</div>
 }
 
 function EmptyList({ searching, trash }: { searching: boolean; trash: boolean }) {
@@ -132,10 +132,10 @@ function EmptyList({ searching, trash }: { searching: boolean; trash: boolean })
         <ClipboardPaste className="size-5 text-muted-foreground" strokeWidth={1.5} />
       </div>
       <div className="space-y-1">
-        <p className="text-[14px] font-medium">Paste anything</p>
+        <p className="text-title font-medium">Paste anything</p>
         <p className="max-w-64 text-muted-foreground">Text, code, links, images, video, files. It stays here until you remove it.</p>
       </div>
-      <div className="flex items-center gap-3 text-[12px] text-subtle">
+      <div className="flex items-center gap-3 text-detail text-subtle">
         <span className="flex items-center gap-1.5">
           <Kbd>⌘</Kbd>
           <Kbd>V</Kbd> paste

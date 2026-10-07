@@ -45,6 +45,7 @@ interface UiState {
   overlay: Overlay
   /** Space whose name is being edited inline in the sidebar. */
   renamingSpace: string | null
+  sidebarOpen: boolean
 
   setView: (view: View) => void
   setSort: (sort: SortMode) => void
@@ -57,6 +58,7 @@ interface UiState {
   setQueue: (queue: Queue | null) => void
   setOverlay: (overlay: Overlay) => void
   setRenamingSpace: (id: string | null) => void
+  setSidebarOpen: (open: boolean) => void
 }
 
 export const useUi = create<UiState>()(
@@ -72,6 +74,7 @@ export const useUi = create<UiState>()(
       queue: null,
       overlay: null,
       renamingSpace: null,
+      sidebarOpen: true,
 
       setView: (view) => set({ view, query: "", selected: [], cursor: null, anchor: null, queue: null }),
       setSort: (sort) => set({ sort }),
@@ -103,11 +106,12 @@ export const useUi = create<UiState>()(
       setQueue: (queue) => set({ queue }),
       setOverlay: (overlay) => set({ overlay }),
       setRenamingSpace: (renamingSpace) => set({ renamingSpace }),
+      setSidebarOpen: (sidebarOpen) => set({ sidebarOpen }),
     }),
     {
       name: "paste:ui",
       version: 1,
-      partialize: ({ view, sort, layout }) => ({ view, sort, layout }),
+      partialize: ({ view, sort, layout, sidebarOpen }) => ({ view, sort, layout, sidebarOpen }),
     },
   ),
 )

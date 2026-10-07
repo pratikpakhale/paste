@@ -42,10 +42,10 @@ export function Composer() {
     <Dialog open={open} onOpenChange={(next) => !next && close()}>
       <DialogContent showCloseButton={false} className="top-[16%] translate-y-0 gap-0 p-0 sm:max-w-xl">
         <DialogHeader className="flex-row items-center gap-2 border-b px-4 py-3">
-          <DialogTitle className="text-[13px] font-medium">New clip</DialogTitle>
+          <DialogTitle className="text-base font-medium">New clip</DialogTitle>
           <DialogDescription className="sr-only">Write a clip. Its type is detected when saved.</DialogDescription>
           {view.type === "space" && (
-            <span className="flex items-center gap-1.5 rounded-full border px-2 py-px text-[11px] text-muted-foreground">
+            <span className="flex items-center gap-1.5 rounded-full border px-2 py-px text-caption text-muted-foreground">
               <SpaceDot id={view.id} className="size-1.5" />
               {viewTitle(view, spaces)}
             </span>
@@ -62,7 +62,7 @@ export function Composer() {
             }
           }}
           placeholder="Write or paste… type is detected automatically"
-          className="[field-sizing:content] max-h-[55vh] min-h-48 resize-none bg-transparent px-4 py-3.5 text-[14px] leading-relaxed outline-none placeholder:text-subtle"
+          className="[field-sizing:content] max-h-[55vh] min-h-48 resize-none bg-transparent px-4 py-3.5 text-title leading-relaxed outline-none placeholder:text-subtle"
         />
         <div className="flex items-center justify-end gap-2 border-t px-3 py-2.5">
           <Button variant="ghost" size="sm" onClick={close}>
@@ -97,6 +97,7 @@ const SHORTCUTS: { group: string; items: [string, string][] }[] = [
       ["/", "Filter this view"],
       ["⌘ K", "Search everything & commands"],
       ["G then A · P · T", "All · Pinned · Trash"],
+      ["[ / ⌘ \\", "Toggle sidebar"],
     ],
   },
   {
@@ -135,9 +136,9 @@ export function ShortcutsDialog() {
         <div className="grid grid-cols-2 gap-x-8 gap-y-5">
           {SHORTCUTS.map(({ group, items }) => (
             <div key={group} className="flex flex-col gap-1.5">
-              <span className="text-[11px] font-medium text-subtle">{group}</span>
+              <span className="text-caption font-medium text-subtle">{group}</span>
               {items.map(([keys, label]) => (
-                <div key={label} className="flex items-center justify-between gap-3 text-[12.5px]">
+                <div key={label} className="flex items-center justify-between gap-3 text-detail">
                   <span className="text-muted-foreground">{label}</span>
                   <span className="flex shrink-0 gap-1">
                     {/* Tokens repeat within a shortcut (⌥ ⇧ ↑ / ⌥ ⇧ ↓) and the list is static, so position is the identity. */}
@@ -146,7 +147,7 @@ export function ShortcutsDialog() {
                       k.length === 1 || /^[⌘⌥⇧↵⌫↑↓]/.test(k) || k === "Drop" || k === "Esc" ? (
                         <Kbd key={i}>{k}</Kbd>
                       ) : (
-                        <span key={i} className="text-[11px] text-subtle">
+                        <span key={i} className="text-caption text-subtle">
                           {k}
                         </span>
                       ),
@@ -206,7 +207,7 @@ export function QueueBar() {
             />
           ))}
         </div>
-        <span className="text-[12px] text-muted-foreground tabular-nums">
+        <span className="text-detail text-muted-foreground tabular-nums">
           {queue.index} of {queue.ids.length} copied
         </span>
         {next && (
@@ -282,7 +283,7 @@ export function DropZone() {
     <div className="pointer-events-none fixed inset-0 z-50 flex animate-in items-center justify-center bg-background/70 backdrop-blur-sm fade-in">
       <div className="flex flex-col items-center gap-3 rounded-2xl border-2 border-dashed border-primary/50 bg-card/80 px-14 py-10 shadow-2xl">
         <ClipboardPaste className="size-7 text-primary" strokeWidth={1.5} />
-        <span className="text-[14px] font-medium">Drop to add to {target}</span>
+        <span className="text-title font-medium">Drop to add to {target}</span>
       </div>
     </div>
   )

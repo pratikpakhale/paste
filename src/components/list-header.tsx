@@ -1,4 +1,4 @@
-import { ArrowDownUp, LayoutGrid, List, Plus, Search, Trash2, X } from "lucide-react"
+import { ArrowDownUp, LayoutGrid, List, PanelLeft, Plus, Search, Trash2, X } from "lucide-react"
 import { useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import {
@@ -33,6 +33,7 @@ export function ListHeader() {
   const sort = useUi((s) => s.sort)
   const layout = useUi((s) => s.layout)
   const query = useUi((s) => s.query)
+  const sidebarOpen = useUi((s) => s.sidebarOpen)
   const search = useRef<HTMLInputElement>(null)
 
   useEffect(() => onSearchRequest(() => search.current?.focus()), [])
@@ -40,7 +41,24 @@ export function ListHeader() {
   const inTrash = view.type === "trash"
 
   return (
-    <header className="flex h-12 shrink-0 items-center gap-2 border-b pr-2.5 pl-4">
+    <header className="flex h-12 shrink-0 items-center gap-2 border-b pr-2.5 pl-2.5">
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label={sidebarOpen ? "Hide sidebar" : "Show sidebar"}
+            onClick={() => useUi.getState().setSidebarOpen(!sidebarOpen)}
+            className="text-muted-foreground"
+          >
+            <PanelLeft />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>
+          {sidebarOpen ? "Hide sidebar" : "Show sidebar"}
+          <Kbd>[</Kbd>
+        </TooltipContent>
+      </Tooltip>
       <div className="flex min-w-0 items-center gap-2">
         {view.type === "space" && <SpaceDot id={view.id} />}
         <h1 className="truncate font-medium">{viewTitle(view, spaces)}</h1>
@@ -117,7 +135,7 @@ export function ListHeader() {
                   ))}
                 </DropdownMenuRadioGroup>
                 {sort === "manual" && (
-                  <p className="px-2 pt-1 pb-1.5 text-[11px] leading-snug text-subtle">
+                  <p className="px-2 pt-1 pb-1.5 text-caption leading-snug text-subtle">
                     Drag to rearrange, or ⌥↑ ⌥↓. New pastes land on top.
                   </p>
                 )}

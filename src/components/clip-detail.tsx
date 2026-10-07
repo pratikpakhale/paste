@@ -27,11 +27,11 @@ import {
 import { Kbd } from "@/components/ui/kbd"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
-import { updateClip } from "@/db/actions"
+import { renameClip, updateClip } from "@/db/actions"
 import { type Clip, isFileClip, type TextClip, type TextKind } from "@/db/schema"
 import { isDownloadOnly } from "@/lib/clipboard"
 import { type LanguageOption, loadLanguages } from "@/lib/code"
-import { clipDetail, clipLabel, clipSize, formatAgo, formatBytes, formatDate, kindLabel } from "@/lib/format"
+import { clipDetail, clipLabel, clipSize, extensionStart, formatAgo, formatBytes, formatDate, kindLabel } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import { useActions } from "@/state/actions"
 import { onEditRequest, onRenameRequest } from "@/lib/ui-events"
@@ -85,31 +85,49 @@ function IconAction({
   )
 }
 
+/** A file clip's name is its file name; a text clip's is its title, with the derived label as placeholder. */
+const storedName = (clip: Clip) => (isFileClip(clip) ? clip.file.name : clip.title)
+
+/** Keyed by the stored name, so a rename that resolves differently (an extension kept) shows what was saved. */
 function TitleInput({ clip }: { clip: Clip }) {
-  const [value, setValue] = useState(clip.title)
+  const stored = storedName(clip)
+  const isFile = isFileClip(clip)
+  const [value, setValue] = useState(stored)
   const ref = useRef<HTMLInputElement>(null)
 
-  useEffect(() => onRenameRequest(() => ref.current?.focus()), [])
+  useEffect(
+    () =>
+      onRenameRequest(() => {
+        const input = ref.current
+        if (!input) return
+        input.focus()
+        // Like Finder: select the name but not the extension.
+        input.setSelectionRange(0, isFile ? extensionStart(input.value) : input.value.length)
+      }),
+    [isFile],
+  )
 
   const save = () => {
-    if (value.trim() !== clip.title) void updateClip(clip.id, { title: value.trim() })
+    if (value.trim() !== stored) void renameClip(clip.id, value)
   }
 
   return (
     <input
       ref={ref}
       value={value}
+      aria-label={isFile ? "File name" : "Title"}
       onChange={(e) => setValue(e.target.value)}
       onBlur={save}
       onKeyDown={(e) => {
         if (e.key === "Enter") e.currentTarget.blur()
         if (e.key === "Escape") {
-          setValue(clip.title)
+          setValue(stored)
           requestAnimationFrame(() => ref.current?.blur())
         }
       }}
-      placeholder={clipLabel({ ...clip, title: "" })}
-      className="min-w-0 flex-1 truncate bg-transparent text-[14px] font-medium outline-none placeholder:text-foreground/80 focus:placeholder:text-subtle"
+      placeholder={isFile ? "Name" : clipLabel({ ...clip, title: "" })}
+      spellCheck={!isFile}
+      className="min-w-0 flex-1 truncate bg-transparent text-title font-medium outline-none placeholder:text-foreground/80 focus:placeholder:text-subtle"
     />
   )
 }
@@ -125,7 +143,7 @@ function ClipDetail({ clip }: { clip: Clip }) {
     <div className="flex h-full min-w-0 flex-col">
       <header className="flex h-12 shrink-0 items-center gap-2.5 border-b pr-2.5 pl-5">
         <ClipThumb clip={clip} />
-        <TitleInput clip={clip} />
+        <TitleInput key={storedName(clip)} clip={clip} />
         <div className="flex items-center">
           {inTrash ? (
             <>
@@ -251,7 +269,7 @@ function LanguagePicker({ clip }: { clip: TextClip }) {
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button variant="ghost" size="xs" className="font-mono text-[11px] text-muted-foreground">
+        <Button variant="ghost" size="xs" className="font-mono text-caption text-muted-foreground">
           {clip.language ?? "plain"}
           <ChevronDown className="opacity-60" />
         </Button>
@@ -295,7 +313,7 @@ function ModeToggle({ editing, onChange }: { editing: boolean; onChange: (editin
           type="button"
           onClick={() => onChange(value)}
           className={cn(
-            "flex h-5.5 items-center gap-1 rounded-[5px] px-2 text-[11.5px] transition-colors",
+            "flex h-5.5 items-center gap-1 rounded-[5px] px-2 text-caption transition-colors",
             editing === value ? "bg-background text-foreground shadow-xs dark:bg-accent" : "text-muted-foreground hover:text-foreground",
           )}
         >
@@ -353,7 +371,7 @@ function Meta({ clip }: { clip: Clip }) {
   ].filter((item) => item !== null)
 
   return (
-    <footer className="flex h-9 shrink-0 items-center gap-4 overflow-hidden border-t px-5 text-[11px] whitespace-nowrap text-subtle">
+    <footer className="flex h-9 shrink-0 items-center gap-4 overflow-hidden border-t px-5 text-caption whitespace-nowrap text-subtle">
       {items.map(([label, value]) => (
         <span key={label}>
           {label} <span className="text-muted-foreground">{value}</span>
@@ -376,7 +394,7 @@ function MultiDetail({ ids }: { ids: string[] }) {
   return (
     <div className="flex h-full min-w-0 flex-col">
       <header className="flex h-12 shrink-0 items-center gap-2 border-b px-5">
-        <span className="text-[14px] font-medium">{clips.length} clips selected</span>
+        <span className="text-title font-medium">{clips.length} clips selected</span>
         <Button variant="ghost" size="xs" className="ml-auto text-muted-foreground" onClick={() => useUi.getState().clearSelection()}>
           Clear <Kbd>Esc</Kbd>
         </Button>
@@ -434,18 +452,18 @@ function MultiDetail({ ids }: { ids: string[] }) {
         )}
 
         <div className="flex flex-col">
-          <span className="mb-1.5 text-[11px] font-medium text-subtle">{inTrash ? "Selected" : "Copy order"}</span>
+          <span className="mb-1.5 text-caption font-medium text-subtle">{inTrash ? "Selected" : "Copy order"}</span>
           <ol className="flex flex-col overflow-hidden rounded-lg border">
             {clips.map((clip, i) => (
               <li key={clip.id} className="flex h-9 items-center gap-2.5 border-b px-3 last:border-b-0">
-                <span className="w-4 text-right text-[11px] text-subtle tabular-nums">{i + 1}</span>
+                <span className="w-4 text-right text-caption text-subtle tabular-nums">{i + 1}</span>
                 <ClipThumb clip={clip} />
                 <span className="min-w-0 flex-1 truncate">{clipLabel(clip)}</span>
-                <span className="shrink-0 text-[11px] text-subtle">{kindLabel(clip.kind)}</span>
+                <span className="shrink-0 text-caption text-subtle">{kindLabel(clip.kind)}</span>
               </li>
             ))}
           </ol>
-          {!inTrash && <p className="mt-2 text-[11px] text-subtle">Rearrange the list (⌥↑ ⌥↓ or drag) to change the order.</p>}
+          {!inTrash && <p className="mt-2 text-caption text-subtle">Rearrange the list (⌥↑ ⌥↓ or drag) to change the order.</p>}
         </div>
       </div>
     </div>
@@ -479,7 +497,7 @@ function BigAction({
       <Icon className={cn("mt-px size-4 shrink-0", primary ? "text-primary" : "text-muted-foreground")} />
       <span className="flex min-w-0 flex-1 flex-col gap-0.5">
         <span className="font-medium">{label}</span>
-        {hint && <span className="text-[11.5px] leading-snug text-subtle">{hint}</span>}
+        {hint && <span className="text-caption leading-snug text-subtle">{hint}</span>}
       </span>
       <Kbd>{keys}</Kbd>
     </button>
@@ -500,7 +518,7 @@ function EmptyDetail() {
   return (
     <div className="flex h-full flex-col items-center justify-center gap-6 p-8">
       <ClipboardPaste className="size-6 text-faint" strokeWidth={1.5} />
-      <div className="grid grid-cols-[auto_1fr] items-center gap-x-4 gap-y-2.5 text-[12.5px]">
+      <div className="grid grid-cols-[auto_1fr] items-center gap-x-4 gap-y-2.5 text-detail">
         {rows.map(([keys, label]) => (
           <div key={label} className="contents">
             <span className="flex justify-end gap-1">

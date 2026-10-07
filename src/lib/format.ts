@@ -38,6 +38,23 @@ export function clipLabel(clip: Clip): string {
   return firstLine(clip.text)
 }
 
+/** Index where a file name's extension starts (at its dot), or the length when it has none. Dotfiles have no extension. */
+export function extensionStart(name: string): number {
+  const dot = name.lastIndexOf(".")
+  return dot > 0 && dot < name.length - 1 ? dot : name.length
+}
+
+/**
+ * The file name a rename resolves to. Path separators are replaced, an empty name keeps the old one,
+ * and leaving the extension off keeps the old extension, so renaming `IMG_01.png` to `Receipt` gives `Receipt.png`.
+ */
+export function resolveFileName(input: string, current: string): string {
+  const name = input.replaceAll(/[/\\]/g, "-").trim()
+  if (!name) return current
+  const extension = current.slice(extensionStart(current))
+  return extension && extensionStart(name) === name.length ? `${name}${extension}` : name
+}
+
 /** Secondary text shown next to the label in the list. */
 export function clipDetail(clip: Clip): string {
   if (isFileClip(clip)) {

@@ -125,4 +125,48 @@ describe("app", () => {
     press("j")
     await waitFor(() => expect(screen.getByDisplayValue("detail me")).toBeTruthy())
   })
+
+  test("renaming a file renames the file and keeps its extension", async () => {
+    await addClips([{ type: "file", file: new File(["PK"], "IMG_0142.zip", { type: "application/zip" }) }], null)
+    render(<Root />)
+    await screen.findAllByText("IMG_0142.zip")
+    press("j")
+    press("r")
+    const input = await screen.findByLabelText<HTMLInputElement>("File name")
+    expect(document.activeElement?.getAttribute("aria-label")).toBe("File name")
+    // Only the base name is selected, like Finder.
+    expect([input.selectionStart, input.selectionEnd]).toEqual([0, "IMG_0142".length])
+
+    fireEvent.change(input, { target: { value: "Receipt" } })
+    act(() => input.blur())
+    await waitFor(async () => {
+      const [clip] = await liveClips()
+      expect(clip && "file" in clip && clip.file.name).toBe("Receipt.zip")
+    })
+    await waitFor(() => expect(screen.getByLabelText<HTMLInputElement>("File name").value).toBe("Receipt.zip"))
+  })
+
+  test("rename from the palette keeps focus in the name field after it closes", async () => {
+    await addClips([{ type: "text", text: "a note" }], null)
+    render(<Root />)
+    await screen.findByText("a note")
+    press("j")
+    press("k", /mac/i.test(navigator.platform) ? { metaKey: true } : { ctrlKey: true })
+    const search = await screen.findByPlaceholderText(/Search clips or type a command/)
+    fireEvent.change(search, { target: { value: "rename" } })
+    fireEvent.click(await screen.findByText("Rename"))
+    // Compare labels, not elements: bun's diff of two DOM nodes on a failed retry crashes the runner.
+    await waitFor(() => expect(document.activeElement?.getAttribute("aria-label")).toBe("Title"))
+  })
+
+  test("[ toggles the sidebar", async () => {
+    render(<Root />)
+    await screen.findByText("Paste anything")
+    expect(useUi.getState().sidebarOpen).toBe(true)
+    press("[", { code: "BracketLeft" })
+    expect(useUi.getState().sidebarOpen).toBe(false)
+    expect(await screen.findByLabelText("Show sidebar")).toBeTruthy()
+    press("[", { code: "BracketLeft" })
+    expect(useUi.getState().sidebarOpen).toBe(true)
+  })
 })

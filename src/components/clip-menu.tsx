@@ -1,4 +1,4 @@
-import { ArchiveRestore, Copy, CopyPlus, Download, FolderInput, ListOrdered, Pin, PinOff, Trash2, X } from "lucide-react"
+import { ArchiveRestore, Copy, CopyPlus, Download, FolderInput, ListOrdered, PencilLine, Pin, PinOff, Trash2, X } from "lucide-react"
 import type { ReactNode } from "react"
 import {
   ContextMenu,
@@ -11,6 +11,8 @@ import {
   ContextMenuSubTrigger,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu"
+import { useDeferredFocus } from "@/hooks/use-deferred-focus"
+import { requestRename } from "@/lib/ui-events"
 import { useActions } from "@/state/actions"
 import { useData } from "@/state/data"
 import { useUi } from "@/state/ui"
@@ -21,17 +23,18 @@ import { SpaceDot } from "./clip-visual"
  * The trigger holds no subscriptions so list rows stay cheap; the content mounts only while open.
  */
 export function ClipMenu({ clipId, onOpen, children }: { clipId: string; onOpen: (id: string) => void; children: ReactNode }) {
+  const { defer, onCloseAutoFocus } = useDeferredFocus()
   return (
     <ContextMenu onOpenChange={(open) => open && onOpen(clipId)}>
       <ContextMenuTrigger asChild>{children}</ContextMenuTrigger>
-      <ContextMenuContent className="w-56">
-        <ClipMenuItems clipId={clipId} />
+      <ContextMenuContent className="w-56" onCloseAutoFocus={onCloseAutoFocus}>
+        <ClipMenuItems clipId={clipId} defer={defer} />
       </ContextMenuContent>
     </ContextMenu>
   )
 }
 
-function ClipMenuItems({ clipId }: { clipId: string }) {
+function ClipMenuItems({ clipId, defer }: { clipId: string; defer: (run: () => void) => void }) {
   const actions = useActions()
   const { spaces, byId } = useData()
   const selected = useUi((s) => s.selected)
@@ -75,6 +78,12 @@ function ClipMenuItems({ clipId }: { clipId: string }) {
         </>
       )}
       <ContextMenuSeparator />
+      {!many && (
+        <ContextMenuItem onSelect={() => defer(requestRename)}>
+          <PencilLine /> Rename
+          <ContextMenuShortcut>R</ContextMenuShortcut>
+        </ContextMenuItem>
+      )}
       <ContextMenuItem onSelect={() => void actions.togglePin(ids)}>
         {allPinned ? <PinOff /> : <Pin />} {allPinned ? "Unpin" : "Pin"}
         <ContextMenuShortcut>P</ContextMenuShortcut>

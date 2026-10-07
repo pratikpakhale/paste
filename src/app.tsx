@@ -10,6 +10,7 @@ import { Sidebar } from "@/components/sidebar"
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable"
 import { purgeExpiredTrash } from "@/db/actions"
 import { usePasteCapture, useShortcuts } from "@/hooks/use-shortcuts"
+import { cn } from "@/lib/utils"
 import { useActions } from "@/state/actions"
 import { useUi } from "@/state/ui"
 
@@ -18,6 +19,7 @@ export function App() {
   usePasteCapture(actions)
   useShortcuts(actions)
   const layout = useDefaultLayout({ id: "paste:panes", storage: localStorage })
+  const sidebarOpen = useUi((s) => s.sidebarOpen)
 
   useEffect(() => {
     void purgeExpiredTrash()
@@ -37,17 +39,22 @@ export function App() {
     <DragLayer>
       <div className="flex h-dvh overflow-hidden">
         <Sidebar />
-        <main className="min-w-0 flex-1 py-2 pr-2">
+        <main
+          className={cn(
+            "min-w-0 flex-1 py-2 pr-2 transition-[padding] duration-200 ease-out motion-reduce:transition-none",
+            !sidebarOpen && "pl-2",
+          )}
+        >
           <div className="h-full overflow-hidden rounded-lg border bg-background shadow-[0_1px_3px_oklch(0_0_0/0.04)] dark:shadow-none">
             <ResizablePanelGroup id="paste:panes" defaultLayout={layout.defaultLayout} onLayoutChanged={layout.onLayoutChanged}>
-              <ResizablePanel id="list" defaultSize="54" minSize={320}>
+              <ResizablePanel id="list" defaultSize="54" minSize={340}>
                 <section className="flex h-full min-w-0 flex-col">
                   <ListHeader />
                   <ClipList />
                 </section>
               </ResizablePanel>
               <ResizableHandle className="bg-border" />
-              <ResizablePanel id="detail" defaultSize="46" minSize={340}>
+              <ResizablePanel id="detail" defaultSize="46" minSize={360}>
                 <DetailPane />
               </ResizablePanel>
             </ResizablePanelGroup>

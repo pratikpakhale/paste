@@ -3,7 +3,7 @@ import { useBlobUrl } from "@/hooks/use-blob-url"
 import { cn } from "@/lib/utils"
 import { KIND_ICON } from "./kind-icons"
 
-/** The 18px leading visual of a row: a real thumbnail or swatch where possible, else the kind icon. */
+/** The small leading visual of a row: a real thumbnail or swatch where possible, else the kind icon. */
 export function ClipThumb({ clip, className }: { clip: Clip; className?: string }) {
   const thumbId = isFileClip(clip) && clip.kind === "image" ? (clip.thumbId ?? clip.blobId) : isFileClip(clip) ? clip.thumbId : undefined
   const url = useBlobUrl(thumbId)
@@ -11,7 +11,7 @@ export function ClipThumb({ clip, className }: { clip: Clip; className?: string 
   if (clip.kind === "color" && !isFileClip(clip)) {
     return (
       <span
-        className={cn("size-[18px] shrink-0 rounded-[5px] shadow-[inset_0_0_0_1px_oklch(0_0_0/0.12)]", className)}
+        className={cn("size-5.5 shrink-0 rounded-[5px] shadow-[inset_0_0_0_1px_oklch(0_0_0/0.12)]", className)}
         style={{ background: clip.text.trim() }}
       />
     )
@@ -22,7 +22,7 @@ export function ClipThumb({ clip, className }: { clip: Clip; className?: string 
         src={url}
         alt=""
         draggable={false}
-        className={cn("size-[18px] shrink-0 rounded-[4px] object-cover shadow-[0_0_0_1px_var(--border)]", className)}
+        className={cn("size-5.5 shrink-0 rounded-[4px] object-cover shadow-[0_0_0_1px_var(--border)]", className)}
       />
     )
   }

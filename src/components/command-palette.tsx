@@ -11,6 +11,8 @@ import {
   ListOrdered,
   type LucideIcon,
   Monitor,
+  PanelLeft,
+  PencilLine,
   Moon,
   Pin,
   Plus,
@@ -31,8 +33,10 @@ import {
   CommandShortcut,
 } from "@/components/ui/command"
 import { createSpace } from "@/db/actions"
+import { useDeferredFocus } from "@/hooks/use-deferred-focus"
 import { clipLabel, kindLabel } from "@/lib/format"
 import { useSearch } from "@/lib/search"
+import { requestRename } from "@/lib/ui-events"
 import { newSpace, useActions } from "@/state/actions"
 import { useData } from "@/state/data"
 import { useUi, type View } from "@/state/ui"
@@ -46,6 +50,8 @@ interface Item {
   dot?: string
   keys?: string
   keywords?: string
+  /** Moves focus into the page, so it runs once the dialog has handed focus back. */
+  focuses?: boolean
   run: () => void
 }
 
@@ -57,6 +63,7 @@ function matches(item: Item, words: string[]) {
 export function CommandPalette() {
   const overlay = useUi((s) => s.overlay)
   const open = overlay === "palette" || overlay === "move"
+  const { defer, onCloseAutoFocus } = useDeferredFocus()
   return (
     <CommandDialog
       open={open}
@@ -64,10 +71,11 @@ export function CommandPalette() {
       title="Command palette"
       description="Search clips and run commands"
       className="top-[16%] sm:max-w-xl"
+      onCloseAutoFocus={onCloseAutoFocus}
     >
       {/* Filtering is done here (full-text for clips), not by cmdk. */}
       <Command shouldFilter={false} loop>
-        {open && (overlay === "move" ? <MoveCommands /> : <RootCommands />)}
+        {open && (overlay === "move" ? <MoveCommands /> : <RootCommands defer={defer} />)}
       </Command>
     </CommandDialog>
   )
@@ -80,7 +88,7 @@ function close() {
 const ui = useUi.getState
 const go = (view: View) => () => ui().setView(view)
 
-function RootCommands() {
+function RootCommands({ defer }: { defer: (run: () => void) => void }) {
   const [query, setQuery] = useState("")
   const { live, spaces, counts, visible } = useData()
   const actions = useActions()
@@ -111,6 +119,9 @@ function RootCommands() {
                 },
               ]
             : []),
+          ...(many
+            ? []
+            : [{ id: "rename", label: "Rename", icon: PencilLine, keys: "R", keywords: "title name", focuses: true, run: requestRename }]),
           { id: "pin", label: "Pin / unpin", icon: Pin, keys: "P", run: () => void actions.togglePin() },
           { id: "move", label: "Move to space…", icon: FolderInput, keys: "M", run: () => ui().setOverlay("move") },
           { id: "download", label: "Download", icon: Download, keys: "D", run: () => void actions.download() },
@@ -120,13 +131,28 @@ function RootCommands() {
 
     const general: Item[] = [
       { id: "new", label: "New clip", icon: Plus, keys: "N", keywords: "write create note", run: () => ui().setOverlay("composer") },
-      { id: "new-space", label: "New space", icon: FolderPlus, keywords: "create folder collection", run: () => void newSpace() },
+      {
+        id: "new-space",
+        label: "New space",
+        icon: FolderPlus,
+        keywords: "create folder collection",
+        focuses: true,
+        run: () => void newSpace(),
+      },
       {
         id: "select-all",
         label: "Select all in view",
         icon: ListOrdered,
         keys: "⌘A",
         run: () => ui().setSelection(visible.map((c) => c.id)),
+      },
+      {
+        id: "sidebar",
+        label: "Toggle sidebar",
+        icon: PanelLeft,
+        keys: "[",
+        keywords: "hide show collapse",
+        run: () => ui().setSidebarOpen(!ui().sidebarOpen),
       },
       { id: "layout-list", label: "View as list", icon: List, keywords: "layout", run: () => ui().setLayout("list") },
       { id: "layout-grid", label: "View as grid", icon: LayoutGrid, keywords: "layout gallery", run: () => ui().setLayout("grid") },
@@ -213,7 +239,8 @@ function RootCommands() {
                     value={item.id}
                     onSelect={() => {
                       if (item.id !== "move") close()
-                      item.run()
+                      if (item.focuses) defer(item.run)
+                      else item.run()
                     }}
                   >
                     {item.dot ? (

@@ -8,6 +8,11 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
+  /* App type scale, in rem so the root size below scales the whole UI. Register new names in lib/utils.ts. */
+  --text-micro: 0.77rem;
+  --text-caption: 0.85rem;
+  --text-detail: 0.94rem;
+  --text-title: 1.075rem;
   --font-heading: var(--font-sans);
   --font-sans: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "Geist Mono Variable", ui-monospace, SFMono-Regular, monospace;
@@ -121,7 +126,8 @@
   }
   html {
     @apply font-sans antialiased;
-    font-size: 13px;
+    /* Everything is rem-based, so this one value sets the size of the whole UI. */
+    font-size: 14px;
     font-feature-settings: "cv11", "ss01";
     color-scheme: light;
   }
