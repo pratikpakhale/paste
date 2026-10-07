@@ -56,7 +56,7 @@ export function ListHeader() {
       </div>
 
       <div className="ml-auto flex items-center gap-1.5">
-        <label className="group flex h-7 w-48 items-center gap-2 rounded-md px-2 text-muted-foreground transition-colors focus-within:bg-accent hover:bg-accent/60">
+        <label className="group flex h-7 w-48 cursor-text items-center gap-2 rounded-md px-2 text-muted-foreground transition-colors focus-within:bg-accent hover:bg-accent/60">
           <Search className="size-4 shrink-0" />
           <input
             ref={search}

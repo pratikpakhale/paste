@@ -253,7 +253,7 @@ export function ImageView({ clip }: { clip: FileClip }) {
       <Dialog open={zoom} onOpenChange={setZoom}>
         <DialogContent
           showCloseButton={false}
-          className="flex h-[92vh] w-[94vw] max-w-none items-center justify-center border-0 bg-transparent p-0 shadow-none ring-0 sm:max-w-none"
+          className="flex h-[92vh] w-[94vw] max-w-none cursor-zoom-out items-center justify-center border-0 bg-transparent p-0 shadow-none ring-0 sm:max-w-none"
           onClick={() => setZoom(false)}
         >
           <DialogTitle className="sr-only">{clip.file.name}</DialogTitle>

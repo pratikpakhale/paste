@@ -114,7 +114,10 @@ function NameField({ clip }: { clip: Clip }) {
   const commit = () => {
     if (draft === null) return
     setDraft(null)
-    if (cancelled.current) return void (cancelled.current = false)
+    if (cancelled.current) {
+      cancelled.current = false
+      return
+    }
     const next = draft.trim()
     // An emptied file name keeps the old one; an emptied title goes back to the derived label.
     if (next !== stored && (next || !isFile)) void renameClip(clip.id, next)
@@ -151,7 +154,7 @@ function NameField({ clip }: { clip: Clip }) {
       <button
         type="button"
         onClick={() => setDraft(stored)}
-        className={cn(box, "group/name flex max-w-full items-center gap-2 text-left transition-colors hover:bg-accent/70")}
+        className={cn(box, "group/name flex max-w-full cursor-text items-center gap-2 text-left transition-colors hover:bg-accent/70")}
       >
         {isFile ? (
           <span className="flex min-w-0">
@@ -190,7 +193,8 @@ function CopyButton({ clip }: { clip: Clip }) {
         </Button>
       </TooltipTrigger>
       <TooltipContent>
-        Copy <Kbd>↵</Kbd>
+        Copy
+        <Kbd>↵</Kbd>
       </TooltipContent>
     </Tooltip>
   )
@@ -262,6 +266,7 @@ function Toolbar({ clip, editing, onEditingChange }: { clip: Clip } & ModeProps)
   const { spaces } = useData()
   const actions = useActions()
   const space = spaces.find((s) => s.id === clip.spaceId)
+  const extension = isFileClip(clip) && fileExtension(clip.file.name)
 
   return (
     <div className="flex h-10 shrink-0 items-center gap-1 border-b px-3">
@@ -287,9 +292,14 @@ function Toolbar({ clip, editing, onEditingChange }: { clip: Clip } & ModeProps)
         </DropdownMenuContent>
       </DropdownMenu>
 
-      {!isFileClip(clip) && (
+      <span className="h-3.5 w-px bg-border" />
+      {isFileClip(clip) ? (
+        <span className="px-2 text-caption text-muted-foreground">
+          {kindLabel(clip.kind)}
+          {extension && <span className="text-subtle"> · {extension}</span>}
+        </span>
+      ) : (
         <>
-          <span className="h-3.5 w-px bg-border" />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="xs" className="text-muted-foreground">
@@ -307,31 +317,20 @@ function Toolbar({ clip, editing, onEditingChange }: { clip: Clip } & ModeProps)
             </DropdownMenuContent>
           </DropdownMenu>
           {clip.kind === "code" && <LanguagePicker clip={clip} />}
+          {(clip.kind === "markdown" || clip.kind === "code" || clip.kind === "json") && (
+            <div className="ml-auto">
+              <Segmented<"preview" | "edit">
+                label="Mode"
+                value={editing ? "edit" : "preview"}
+                onChange={(mode) => onEditingChange(mode === "edit")}
+                options={[
+                  { value: "preview", label: "Preview", icon: Eye },
+                  { value: "edit", label: "Edit", icon: PencilLine },
+                ]}
+              />
+            </div>
+          )}
         </>
-      )}
-
-      {isFileClip(clip) && (
-        <>
-          <span className="h-3.5 w-px bg-border" />
-          <span className="px-2 text-caption text-muted-foreground">
-            {kindLabel(clip.kind)}
-            {fileExtension(clip.file.name) && <span className="text-subtle"> · {fileExtension(clip.file.name)}</span>}
-          </span>
-        </>
-      )}
-
-      {!isFileClip(clip) && (clip.kind === "markdown" || clip.kind === "code" || clip.kind === "json") && (
-        <div className="ml-auto">
-          <Segmented<"preview" | "edit">
-            label="Mode"
-            value={editing ? "edit" : "preview"}
-            onChange={(mode) => onEditingChange(mode === "edit")}
-            options={[
-              { value: "preview", label: "Preview", icon: Eye },
-              { value: "edit", label: "Edit", icon: PencilLine },
-            ]}
-          />
-        </div>
       )}
     </div>
   )

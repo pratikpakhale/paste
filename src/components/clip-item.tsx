@@ -5,7 +5,7 @@ import { type CSSProperties, memo, type MouseEvent } from "react"
 import { cn } from "@/lib/utils"
 import { type Clip, isFileClip } from "@/db/schema"
 import { useBlobUrl } from "@/hooks/use-blob-url"
-import { clipDetail, clipLabel, formatAgoShort } from "@/lib/format"
+import { clipDetail, clipLabel, fileExtension, formatAgoShort } from "@/lib/format"
 import { ClipMenu } from "./clip-menu"
 import { ClipThumb, SpaceDot } from "./clip-visual"
 import { KIND_ICON } from "./kind-icons"
@@ -88,7 +88,7 @@ function RowBody({ clip, selected, isCursor, position, queuedNext, spaceName, ti
   return (
     <div
       className={cn(
-        "group mx-2 flex h-9 cursor-default items-center gap-3 rounded-md px-3 transition-colors duration-75",
+        "group mx-2 flex h-9 cursor-pointer items-center gap-3 rounded-md px-3 transition-colors duration-75",
         selected ? "bg-selected" : "hover:bg-accent/60",
         // In a multi-selection, mark the one the keyboard moves from.
         isCursor && position !== null && "ring-1 ring-primary/30 ring-inset",
@@ -151,7 +151,7 @@ function CardPreview({ clip }: { clip: Clip }) {
     )
   }
   const Icon = KIND_ICON[clip.kind]
-  const ext = clip.file.name.split(".").pop()?.toUpperCase()
+  const ext = fileExtension(clip.file.name)
   return (
     <div className="flex size-full flex-col items-center justify-center gap-2 text-subtle">
       <Icon className="size-7 stroke-[1.25]" />
@@ -164,7 +164,7 @@ function CardBody({ clip, selected, isCursor, position, queuedNext, timestamp }:
   return (
     <div
       className={cn(
-        "group flex cursor-default flex-col overflow-hidden rounded-lg border bg-card transition-[box-shadow,border-color] duration-100",
+        "group flex cursor-pointer flex-col overflow-hidden rounded-lg border bg-card transition-[box-shadow,border-color] duration-100",
         selected ? "border-primary/60 ring-2 ring-primary/25" : "hover:border-foreground/15",
         isCursor && selected && "border-primary",
       )}

@@ -39,7 +39,12 @@ const collision: CollisionDetection = (args) => {
 export function DragLayer({ children }: { children: ReactNode }) {
   const data = useData()
   const actions = useActions()
-  const [dragged, setDragged] = useState<Active | null>(null)
+  const [dragged, setDraggedState] = useState<Active | null>(null)
+  const setDragged = (active: Active | null) => {
+    setDraggedState(active)
+    // Lets index.css hold the grabbing cursor over everything until the drop.
+    document.documentElement.toggleAttribute("data-dragging", active !== null)
+  }
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
 
   /** Dragging a selected clip drags the whole selection, in on-screen order. */

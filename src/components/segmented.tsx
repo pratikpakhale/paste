@@ -29,7 +29,10 @@ export function Segmented<T extends string>({
       aria-label={label}
       value={value}
       // Radix reports "" when the active item is clicked again; a segmented control always has a value.
-      onValueChange={(next) => next && onChange(next as T)}
+      onValueChange={(next) => {
+        const option = options.find((o) => o.value === next)
+        if (option) onChange(option.value)
+      }}
       spacing={0.5}
       className="h-7 rounded-md bg-muted p-0.5 dark:bg-accent/60"
     >

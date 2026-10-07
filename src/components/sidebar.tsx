@@ -255,7 +255,7 @@ function SpaceItem({ space, count, active }: { space: Space; count: number; acti
           onClick={() => useUi.getState().setView({ type: "space", id: space.id })}
           onDoubleClick={() => useUi.getState().setRenamingSpace(space.id)}
           className={cn(
-            "flex h-8 cursor-default items-center gap-2.5 rounded-md px-2.5 transition-colors duration-75 outline-none",
+            "flex h-8 cursor-pointer items-center gap-2.5 rounded-md px-2.5 transition-colors duration-75 outline-none",
             active ? "bg-sidebar-accent text-sidebar-accent-foreground" : "hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground",
             clipOver && "bg-primary/15 text-foreground ring-1 ring-primary/40",
             isDragging && "opacity-40",
