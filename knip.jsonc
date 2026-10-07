@@ -1,0 +1,10 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "ignoreExportsUsedInFile": true,
+  "ignoreIssues": {
+    // shadcn components export their full API; unused parts are expected.
+    "src/components/ui/**": ["exports", "types"],
+  },
+  // Git hook manager, run as a binary (`lefthook install`) rather than imported or scripted.
+  "ignoreDependencies": ["lefthook"],
+}

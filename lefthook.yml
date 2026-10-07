@@ -1,0 +1,21 @@
+# Per-file work only at commit; whole-program checks (tsc, type-aware lint, knip, tests) at push.
+pre-commit:
+  parallel: true
+  jobs:
+    - name: format
+      glob: "*.{ts,tsx,js,jsx,json,jsonc,css,md,html,yml}"
+      run: bunx oxfmt {staged_files}
+      stage_fixed: true
+
+    - name: lint
+      glob: "*.{ts,tsx,js,jsx}"
+      run: bunx oxlint --fix {staged_files}
+      stage_fixed: true
+
+    - name: secrets
+      run: gitleaks git --staged --redact --no-banner
+
+pre-push:
+  jobs:
+    - name: check
+      run: bun run check

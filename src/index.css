@@ -1,0 +1,170 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "@fontsource-variable/geist";
+@import "@fontsource-variable/geist-mono";
+@plugin "@tailwindcss/typography";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --font-heading: var(--font-sans);
+  --font-sans: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Geist Mono Variable", ui-monospace, SFMono-Regular, monospace;
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-foreground: var(--foreground);
+  --color-background: var(--background);
+  --color-subtle: var(--subtle);
+  --color-faint: var(--faint);
+  --color-selected: var(--selected);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+/* Neutral grays with a faint cool cast and a single indigo accent. */
+:root {
+  --background: oklch(0.995 0.001 286);
+  --foreground: oklch(0.21 0.006 286);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.21 0.006 286);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.21 0.006 286);
+  --primary: oklch(0.55 0.17 274);
+  --primary-foreground: oklch(0.99 0 0);
+  --secondary: oklch(0.965 0.002 286);
+  --secondary-foreground: oklch(0.25 0.006 286);
+  --muted: oklch(0.965 0.002 286);
+  --muted-foreground: oklch(0.52 0.008 286);
+  --subtle: oklch(0.62 0.008 286);
+  --faint: oklch(0.75 0.006 286);
+  --accent: oklch(0.955 0.003 286);
+  --accent-foreground: oklch(0.21 0.006 286);
+  --selected: oklch(0.55 0.17 274 / 9%);
+  --destructive: oklch(0.58 0.22 27);
+  --border: oklch(0.915 0.004 286);
+  --input: oklch(0.905 0.004 286);
+  --ring: oklch(0.55 0.17 274 / 55%);
+  --radius: 0.5rem;
+  --sidebar: oklch(0.975 0.002 286);
+  --sidebar-foreground: oklch(0.3 0.006 286);
+  --sidebar-primary: oklch(0.55 0.17 274);
+  --sidebar-primary-foreground: oklch(0.99 0 0);
+  --sidebar-accent: oklch(0.93 0.003 286);
+  --sidebar-accent-foreground: oklch(0.21 0.006 286);
+  --sidebar-border: oklch(0.915 0.004 286);
+  --sidebar-ring: oklch(0.55 0.17 274 / 55%);
+}
+
+.dark {
+  --background: oklch(0.185 0.004 286);
+  --foreground: oklch(0.94 0.003 286);
+  --card: oklch(0.21 0.004 286);
+  --card-foreground: oklch(0.94 0.003 286);
+  --popover: oklch(0.215 0.005 286);
+  --popover-foreground: oklch(0.94 0.003 286);
+  --primary: oklch(0.64 0.16 274);
+  --primary-foreground: oklch(0.99 0 0);
+  --secondary: oklch(0.25 0.005 286);
+  --secondary-foreground: oklch(0.94 0.003 286);
+  --muted: oklch(0.24 0.005 286);
+  --muted-foreground: oklch(0.68 0.008 286);
+  --subtle: oklch(0.56 0.008 286);
+  --faint: oklch(0.42 0.006 286);
+  --accent: oklch(0.255 0.005 286);
+  --accent-foreground: oklch(0.96 0.003 286);
+  --selected: oklch(0.64 0.16 274 / 14%);
+  --destructive: oklch(0.66 0.19 24);
+  --border: oklch(1 0 0 / 7.5%);
+  --input: oklch(1 0 0 / 10%);
+  --ring: oklch(0.64 0.16 274 / 60%);
+  --sidebar: oklch(0.155 0.004 286);
+  --sidebar-foreground: oklch(0.78 0.006 286);
+  --sidebar-primary: oklch(0.64 0.16 274);
+  --sidebar-primary-foreground: oklch(0.99 0 0);
+  --sidebar-accent: oklch(1 0 0 / 6%);
+  --sidebar-accent-foreground: oklch(0.96 0.003 286);
+  --sidebar-border: oklch(1 0 0 / 6%);
+  --sidebar-ring: oklch(0.64 0.16 274 / 60%);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    @apply font-sans antialiased;
+    font-size: 13px;
+    font-feature-settings: "cv11", "ss01";
+    color-scheme: light;
+  }
+  html.dark {
+    color-scheme: dark;
+  }
+  body {
+    @apply overscroll-none bg-sidebar text-foreground select-none;
+  }
+  ::selection {
+    background: oklch(0.6 0.16 274 / 30%);
+  }
+  input,
+  textarea,
+  [contenteditable],
+  .selectable {
+    @apply select-text;
+  }
+}
+
+/* Shiki emits both palettes as CSS variables; pick one per theme. */
+.shiki,
+.shiki span {
+  color: var(--shiki-light);
+  background-color: transparent !important;
+}
+.dark .shiki,
+.dark .shiki span {
+  color: var(--shiki-dark);
+}
+
+/* Rows are cheap to lay out but there can be thousands; let the browser skip offscreen ones. */
+.clip-row {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 36px;
+}
+
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+.checkerboard {
+  background-image: conic-gradient(var(--muted) 25%, transparent 0 50%, var(--muted) 0 75%, transparent 0);
+  background-size: 16px 16px;
+}

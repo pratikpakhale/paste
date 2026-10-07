@@ -1,0 +1,7 @@
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "printWidth": 140,
+  "semi": false,
+  "sortTailwindcss": { "stylesheet": "./src/index.css", "functions": ["cn", "cva"] },
+  "ignorePatterns": ["dist", "bun.lock"]
+}

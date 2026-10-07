@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>Paste — a local clipboard for everything you paste</title>
+    <meta
+      name="description"
+      content="Paste keeps text, code, links, colors, images and files in one private, offline clipboard. Organize clips into spaces, reorder them by hand and copy many at once. Nothing leaves your device."
+    />
+    <meta name="application-name" content="Paste" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#f6f6f7" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0c0c0e" media="(prefers-color-scheme: dark)" />
+    <meta name="robots" content="index, follow" />
+
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Paste" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Paste" />
+    <meta property="og:title" content="Paste — a local clipboard for everything you paste" />
+    <meta
+      property="og:description"
+      content="Text, code, images and files in one private, offline clipboard. Spaces, manual ordering and multi-copy."
+    />
+    <!-- site-urls: canonical, og:url and og:image tags, filled in by vite.config.ts when SITE_URL is set -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Paste — a local clipboard for everything you paste" />
+    <meta
+      name="twitter:description"
+      content="Text, code, images and files in one private, offline clipboard. Spaces, manual ordering and multi-copy."
+    />
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "Paste",
+        "description": "A local clipboard for everything you paste: text, code, links, colors, images and files, organized into spaces and stored only on your device.",
+        "applicationCategory": "ProductivityApplication",
+        "operatingSystem": "Any",
+        "browserRequirements": "Requires JavaScript and IndexedDB",
+        "isAccessibleForFree": true,
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+      }
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <noscript>Paste is an offline clipboard app and needs JavaScript to run.</noscript>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
