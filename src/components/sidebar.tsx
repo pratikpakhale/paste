@@ -9,6 +9,7 @@ import {
   type LucideIcon,
   Monitor,
   Moon,
+  NotebookPen,
   PanelLeft,
   Pin,
   Plus,
@@ -34,14 +35,15 @@ import {
 import { Kbd } from "@/components/ui/kbd"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { deleteSpace, renameSpace } from "@/db/actions"
-import type { Space } from "@/db/schema"
+import type { Clip, Space } from "@/db/schema"
 import { useDeferredFocus } from "@/hooks/use-deferred-focus"
 import { useStorage } from "@/hooks/use-storage"
-import { formatBytes } from "@/lib/format"
+import { clipLabel, formatAgoShort, formatBytes } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import { newSpace, useActions } from "@/state/actions"
 import { confirm } from "@/state/confirm"
 import { useData } from "@/state/data"
+import { goWrite, newNote, openNote } from "@/state/notes"
 import { useUi, type View } from "@/state/ui"
 import { SpaceDot } from "./clip-visual"
 import type { DropTarget } from "./drag-layer"
@@ -89,6 +91,7 @@ export function Sidebar() {
 
         <nav className="mt-5 -mr-3 flex min-h-0 flex-1 scrollbar-thin flex-col gap-5 overflow-y-auto pr-3">
           <div className="flex flex-col gap-px">
+            <NavItem icon={NotebookPen} label="Write" count={0} active={view.type === "write"} onClick={() => void goWrite()} />
             <NavItem
               icon={Inbox}
               label="All clips"
@@ -106,6 +109,8 @@ export function Sidebar() {
               drop={draggingClip ? { type: "target", action: "pin" } : undefined}
             />
           </div>
+
+          <RecentNotes live={live} />
 
           {GROUPS.some((g) => counts.kinds[g.group] > 0) && (
             <Section title="Types">
@@ -170,6 +175,74 @@ export function Sidebar() {
         </div>
       </aside>
     </div>
+  )
+}
+
+const RECENT_NOTES = 5
+
+/** The last few notes written in, one click from carrying on. */
+function RecentNotes({ live }: { live: Clip[] }) {
+  const writing = useUi((s) => s.view.type === "write")
+  const current = useUi((s) => s.note)
+  const notes = live
+    .filter((c) => c.kind === "note")
+    .toSorted((a, b) => b.updatedAt - a.updatedAt)
+    .slice(0, RECENT_NOTES)
+
+  return (
+    <Section
+      title="Recent notes"
+      action={
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              aria-label="New note"
+              onClick={() => void newNote()}
+              className="flex size-5 items-center justify-center rounded text-subtle opacity-0 transition-opacity group-hover/section:opacity-100 hover:bg-sidebar-accent hover:text-foreground"
+            >
+              <Plus className="size-3.5" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent>
+            New note <Kbd>N</Kbd>
+          </TooltipContent>
+        </Tooltip>
+      }
+    >
+      {notes.map((note) => {
+        const active = writing && note.id === current
+        return (
+          <button
+            key={note.id}
+            type="button"
+            onClick={() => openNote(note.id)}
+            className={cn(
+              "flex h-8 items-center gap-2.5 rounded-md px-2.5 text-left transition-colors duration-75",
+              active
+                ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                : "hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground",
+            )}
+          >
+            <span className="flex size-4 shrink-0 items-center justify-center">
+              {/* This tab's note, even while looking at a list. */}
+              <span className={cn("size-1.5 rounded-full", note.id === current ? "bg-primary" : "bg-faint")} />
+            </span>
+            <span className="flex-1 truncate">{clipLabel(note)}</span>
+            <span className="text-caption text-subtle tabular-nums">{formatAgoShort(note.updatedAt)}</span>
+          </button>
+        )
+      })}
+      {notes.length === 0 && (
+        <button
+          type="button"
+          onClick={() => void newNote()}
+          className="flex h-8 items-center gap-2.5 rounded-md px-2.5 text-subtle transition-colors duration-75 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+        >
+          <Plus className="size-4" /> New note
+        </button>
+      )}
+    </Section>
   )
 }
 

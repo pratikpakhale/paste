@@ -1,6 +1,6 @@
 import { useLiveQuery } from "dexie-react-hooks"
 import { type ReactNode, useEffect, useMemo } from "react"
-import { type Clip, type ClipKind, db } from "@/db/schema"
+import { type Clip, type ClipKind, db, isBlankNote } from "@/db/schema"
 import { compareManual } from "@/lib/order"
 import { useSearch } from "@/lib/search"
 import { type Counts, type Data, DataContext } from "./data"
@@ -13,6 +13,8 @@ const GROUP_OF = Object.fromEntries(Object.entries(KIND_GROUPS).flatMap(([group,
 
 function inView(clip: Clip, view: View): boolean {
   switch (view.type) {
+    case "write":
+      return false
     case "all":
       return true
     case "pinned":
@@ -56,6 +58,7 @@ function partition(clips: Clip[]) {
   const byId = new Map<string, Clip>()
   for (const clip of clips) {
     byId.set(clip.id, clip)
+    if (isBlankNote(clip)) continue
     if (clip.deletedAt === null) live.push(clip)
     else trashed.push(clip)
   }

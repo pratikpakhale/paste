@@ -3,6 +3,7 @@ import { persist } from "zustand/middleware"
 import type { ClipKind } from "@/db/schema"
 
 export const KIND_GROUPS = {
+  notes: ["note"],
   text: ["text", "markdown"],
   code: ["code", "json"],
   links: ["link"],
@@ -15,6 +16,7 @@ export const KIND_GROUPS = {
 export type KindGroup = keyof typeof KIND_GROUPS
 
 export type View =
+  | { type: "write" }
   | { type: "all" }
   | { type: "pinned" }
   | { type: "kind"; group: KindGroup }
@@ -23,7 +25,7 @@ export type View =
 
 export type SortMode = "manual" | "newest" | "oldest" | "copied"
 export type Layout = "list" | "grid"
-export type Overlay = "palette" | "move" | "composer" | "shortcuts" | null
+export type Overlay = "palette" | "move" | "shortcuts" | null
 
 export interface Queue {
   ids: string[]
@@ -33,6 +35,11 @@ export interface Queue {
 
 interface UiState {
   view: View
+  /**
+   * The note this tab is writing in. Lives in the URL rather than storage, which every tab shares,
+   * so each tab keeps its own note across reloads.
+   */
+  note: string | null
   sort: SortMode
   layout: Layout
   query: string
@@ -48,6 +55,7 @@ interface UiState {
   sidebarOpen: boolean
 
   setView: (view: View) => void
+  setNote: (id: string | null) => void
   setSort: (sort: SortMode) => void
   setLayout: (layout: Layout) => void
   setQuery: (query: string) => void
@@ -64,7 +72,9 @@ interface UiState {
 export const useUi = create<UiState>()(
   persist(
     (set, get) => ({
-      view: { type: "all" },
+      // Paste opens on a blank page; the view isn't persisted.
+      view: { type: "write" },
+      note: new URL(location.href).searchParams.get("note"),
       sort: "manual",
       layout: "list",
       query: "",
@@ -77,6 +87,13 @@ export const useUi = create<UiState>()(
       sidebarOpen: true,
 
       setView: (view) => set({ view, query: "", selected: [], cursor: null, anchor: null, queue: null }),
+      setNote: (note) => {
+        const url = new URL(location.href)
+        if (note) url.searchParams.set("note", note)
+        else url.searchParams.delete("note")
+        history.replaceState(history.state, "", url)
+        set({ note })
+      },
       setSort: (sort) => set({ sort }),
       setLayout: (layout) => set({ layout }),
       setQuery: (query) => set({ query }),
@@ -110,8 +127,13 @@ export const useUi = create<UiState>()(
     }),
     {
       name: "paste:ui",
-      version: 1,
-      partialize: ({ view, sort, layout, sidebarOpen }) => ({ view, sort, layout, sidebarOpen }),
+      version: 2,
+      partialize: ({ sort, layout, sidebarOpen }) => ({ sort, layout, sidebarOpen }),
+      // Version 1 stored the view, which would now override opening on a blank page.
+      migrate: (state) => {
+        const { view: _, ...rest } = state as Pick<UiState, "sort" | "layout" | "sidebarOpen"> & { view?: View }
+        return rest
+      },
     },
   ),
 )

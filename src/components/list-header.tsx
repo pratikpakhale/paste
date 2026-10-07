@@ -15,6 +15,7 @@ import { onSearchRequest } from "@/lib/ui-events"
 import { cn } from "@/lib/utils"
 import { useActions } from "@/state/actions"
 import { useData } from "@/state/data"
+import { newNote } from "@/state/notes"
 import { type Layout, type SortMode, useUi } from "@/state/ui"
 import { SpaceDot } from "./clip-visual"
 import { Segmented } from "./segmented"
@@ -148,15 +149,15 @@ export function ListHeader() {
                 <Button
                   variant="ghost"
                   size="icon-sm"
-                  aria-label="New clip"
+                  aria-label="New note"
                   className="text-muted-foreground"
-                  onClick={() => useUi.getState().setOverlay("composer")}
+                  onClick={() => void newNote()}
                 >
                   <Plus />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                New clip <Kbd>N</Kbd>
+                New note <Kbd>N</Kbd>
               </TooltipContent>
             </Tooltip>
           </>

@@ -5,13 +5,16 @@ import { DetailPane } from "@/components/clip-detail"
 import { CommandPalette } from "@/components/command-palette"
 import { DragLayer } from "@/components/drag-layer"
 import { ListHeader } from "@/components/list-header"
-import { Composer, ConfirmDialog, DropZone, QueueBar, ShortcutsDialog } from "@/components/overlays"
+import { ConfirmDialog, DropZone, QueueBar, ShortcutsDialog } from "@/components/overlays"
 import { Sidebar, SidebarToggle } from "@/components/sidebar"
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable"
-import { purgeExpiredTrash } from "@/db/actions"
-import { usePasteCapture, useShortcuts } from "@/hooks/use-shortcuts"
+import { WritePane } from "@/components/write-pane"
+import { purgeExpiredTrash, sweepNotes } from "@/db/actions"
+import { usePasteCapture } from "@/hooks/use-page-input"
+import { useShortcuts } from "@/hooks/use-shortcuts"
 import { cn } from "@/lib/utils"
 import { useActions } from "@/state/actions"
+import { startSession } from "@/state/notes"
 import { useUi } from "@/state/ui"
 
 export function App() {
@@ -20,19 +23,15 @@ export function App() {
   useShortcuts(actions)
   const layout = useDefaultLayout({ id: "paste:panes", storage: localStorage })
   const sidebarOpen = useUi((s) => s.sidebarOpen)
+  const writing = useUi((s) => s.view.type === "write")
 
   useEffect(() => {
+    void startSession()
     void purgeExpiredTrash()
+    void sweepNotes()
     // Ask the browser not to evict the library under storage pressure. The Storage API only exists
     // in secure contexts, so it's missing when the app is opened over plain http (e.g. a LAN IP).
     if ("storage" in navigator) void navigator.storage.persist()
-    // The installed app's "New clip" shortcut launches with `?new`.
-    const url = new URL(location.href)
-    if (url.searchParams.has("new")) {
-      url.searchParams.delete("new")
-      history.replaceState(null, "", url)
-      useUi.getState().setOverlay("composer")
-    }
   }, [])
 
   return (
@@ -53,25 +52,28 @@ export function App() {
               sidebarOpen ? "rounded-lg shadow-[0_1px_3px_oklch(0_0_0/0.04)] dark:shadow-none" : "border-transparent",
             )}
           >
-            <ResizablePanelGroup id="paste:panes" defaultLayout={layout.defaultLayout} onLayoutChanged={layout.onLayoutChanged}>
-              <ResizablePanel id="list" defaultSize="54" minSize={340}>
-                <section className="flex h-full min-w-0 flex-col">
-                  <ListHeader />
-                  <ClipList />
-                </section>
-              </ResizablePanel>
-              <ResizableHandle className="bg-border" />
-              <ResizablePanel id="detail" defaultSize="46" minSize={360}>
-                <DetailPane />
-              </ResizablePanel>
-            </ResizablePanelGroup>
+            {writing ? (
+              <WritePane />
+            ) : (
+              <ResizablePanelGroup id="paste:panes" defaultLayout={layout.defaultLayout} onLayoutChanged={layout.onLayoutChanged}>
+                <ResizablePanel id="list" defaultSize="54" minSize={340}>
+                  <section className="flex h-full min-w-0 flex-col">
+                    <ListHeader />
+                    <ClipList />
+                  </section>
+                </ResizablePanel>
+                <ResizableHandle className="bg-border" />
+                <ResizablePanel id="detail" defaultSize="46" minSize={360}>
+                  <DetailPane />
+                </ResizablePanel>
+              </ResizablePanelGroup>
+            )}
           </div>
         </main>
       </div>
       <QueueBar />
       <DropZone />
       <CommandPalette />
-      <Composer />
       <ShortcutsDialog />
       <ConfirmDialog />
     </DragLayer>

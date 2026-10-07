@@ -1,9 +1,14 @@
 import { strFromU8, strToU8, unzip, type Unzipped } from "fflate"
-import { type Clip, db, isFileClip, type Space } from "@/db/schema"
+import * as Y from "yjs"
+import { type Clip, db, docUpdates, isFileClip, type Space } from "@/db/schema"
 import { zipFiles } from "./clipboard"
 
 const FORMAT = "paste-archive"
-const VERSION = 1
+/**
+ * 2 added notes, whose documents are stored as `docs/<clip id>` Yjs updates, with the images and files
+ * embedded in them under `blobs/` like any other, and every blob's type in `blobTypes`.
+ */
+const VERSION = 2
 
 interface Manifest {
   format: typeof FORMAT
@@ -11,14 +16,23 @@ interface Manifest {
   exportedAt: number
   spaces: Space[]
   clips: Clip[]
+  /** Content type of each blob, by id. */
+  blobTypes?: Record<string, string>
 }
 
 export async function exportArchive(): Promise<Blob> {
   const [spaces, clips, blobs] = await Promise.all([db.spaces.toArray(), db.clips.toArray(), db.blobs.toArray()])
-  const manifest: Manifest = { format: FORMAT, version: VERSION, exportedAt: Date.now(), spaces, clips }
+  const blobTypes = Object.fromEntries(blobs.map(({ id, blob }) => [id, blob.type]))
+  const manifest: Manifest = { format: FORMAT, version: VERSION, exportedAt: Date.now(), spaces, clips, blobTypes }
   const files: Record<string, Uint8Array> = { "manifest.json": strToU8(JSON.stringify(manifest)) }
   const buffers = await Promise.all(blobs.map(({ blob }) => blob.arrayBuffer()))
   blobs.forEach(({ id }, i) => (files[`blobs/${id}`] = new Uint8Array(buffers[i]!)))
+  const notes = clips.filter((c) => c.kind === "note").map((c) => c.id)
+  const updates = notes.length ? await docUpdates().where("k").anyOf(notes).toArray() : []
+  for (const id of notes) {
+    const own = updates.filter((u) => u.k === id).map((u) => u.u)
+    if (own.length) files[`docs/${id}`] = Y.mergeUpdatesV2(own)
+  }
   return zipFiles(files)
 }
 
@@ -40,17 +54,18 @@ export async function importArchive(file: Blob): Promise<ImportResult> {
   if (manifest.format !== FORMAT) throw new Error("Not a Paste archive")
   if (manifest.version > VERSION) throw new Error("This archive was made by a newer version of Paste")
 
-  return db.transaction("rw", db.clips, db.spaces, db.blobs, async () => {
+  return db.transaction("rw", db.clips, db.spaces, db.blobs, docUpdates(), async () => {
     const existingClips = new Set(await db.clips.toCollection().primaryKeys())
     const existingSpaces = new Set(await db.spaces.toCollection().primaryKeys())
     const spaces = manifest.spaces.filter((s) => !existingSpaces.has(s.id))
     const clips = manifest.clips.filter((c) => !existingClips.has(c.id))
 
-    const blobs = clips.filter(isFileClip).flatMap((clip) => {
-      const ids = clip.thumbId ? [clip.blobId, clip.thumbId] : [clip.blobId]
+    const blobs = clips.flatMap((clip) => {
+      const ids = isFileClip(clip) ? (clip.thumbId ? [clip.blobId, clip.thumbId] : [clip.blobId]) : (clip.blobs ?? [])
       return ids.flatMap((id) => {
         const data = entries[`blobs/${id}`]
-        const type = id === clip.blobId ? clip.file.mime : "image/webp"
+        // Archives from before `blobTypes` only had file clips' blobs: the file, or its WebP thumbnail.
+        const type = manifest.blobTypes?.[id] ?? (isFileClip(clip) ? (id === clip.blobId ? clip.file.mime : "image/webp") : "")
         return data ? [{ id, blob: new Blob([data], { type }) }] : []
       })
     })
@@ -58,6 +73,11 @@ export async function importArchive(file: Blob): Promise<ImportResult> {
     await db.spaces.bulkAdd(spaces)
     await db.blobs.bulkPut(blobs)
     await db.clips.bulkAdd(clips)
+    const docs = clips.flatMap((clip) => {
+      const u = entries[`docs/${clip.id}`]
+      return u ? [{ k: clip.id, u, f: 1 }] : []
+    })
+    await docUpdates().bulkAdd(docs)
     return { clips: clips.length, spaces: spaces.length }
   })
 }

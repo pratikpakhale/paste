@@ -9,6 +9,20 @@ const MAX_HTML_BYTES = 512 * 1024
 /** Images larger than this are left out of multi-clip HTML; data URLs that big make pastes hang. */
 const MAX_INLINE_IMAGE_BYTES = 8 * 1024 * 1024
 
+/** VS Code's language ids where they differ from the highlighter's. */
+const VSCODE_LANGUAGE: Record<string, string> = { typescriptreact: "tsx", javascriptreact: "jsx", shellscript: "bash" }
+
+/** The language a code editor says it copied, if any. VS Code (and editors built on it) put it next to the text. */
+function editorLanguage(dt: DataTransfer): string | undefined {
+  try {
+    const { mode } = JSON.parse(dt.getData("vscode-editor-data") || "{}") as { mode?: string }
+    if (!mode || mode === "plaintext" || mode === "markdown") return undefined
+    return VSCODE_LANGUAGE[mode] ?? mode
+  } catch {
+    return undefined
+  }
+}
+
 /**
  * Turns a paste or drop into clip inputs. Finder copies put the file names in text/plain next to
  * the files, and Office apps add an image rendition next to their text — so files only win when
@@ -24,6 +38,9 @@ export function readTransfer(dt: DataTransfer): ClipInput[] {
     return files.map((file) => ({ type: "file", file }))
   }
   if (text.trim()) {
+    // A code editor's HTML is just its syntax colouring; the language says more.
+    const language = editorLanguage(dt)
+    if (language) return [{ type: "text", text, language }]
     return [{ type: "text", text, html: html && html.length <= MAX_HTML_BYTES ? html : undefined }]
   }
   const uri = dt.getData("text/uri-list")
@@ -49,6 +66,19 @@ function linkHtml(url: string) {
   return `<p><a href="${href}">${href}</a></p>`
 }
 
+/** A note's HTML refers to images in the blob store; other apps need them inline. */
+async function inlineNoteImages(html: string): Promise<string> {
+  if (!html.includes("data-blob")) return html
+  const dom = new DOMParser().parseFromString(html, "text/html")
+  await Promise.all(
+    [...dom.querySelectorAll("img[data-blob]")].map(async (img) => {
+      const blob = await getBlob(img.getAttribute("data-blob")!)
+      if (blob && blob.size <= MAX_INLINE_IMAGE_BYTES) img.setAttribute("src", await blobToDataUrl(blob))
+    }),
+  )
+  return dom.body.innerHTML
+}
+
 async function clipToHtml(clip: Clip): Promise<string> {
   if (isFileClip(clip)) {
     if (clip.kind === "image" && clip.file.size <= MAX_INLINE_IMAGE_BYTES) {
@@ -57,7 +87,7 @@ async function clipToHtml(clip: Clip): Promise<string> {
     }
     return `<p>${escapeHtml(clip.file.name)}</p>`
   }
-  if (clip.html) return clip.html
+  if (clip.html) return clip.kind === "note" ? inlineNoteImages(clip.html) : clip.html
   if (clip.kind === "link") return linkHtml(clip.text)
   if (clip.kind === "code" || clip.kind === "json") return `<pre><code>${escapeHtml(clip.text)}</code></pre>`
   return `<p>${escapeHtml(clip.text).replaceAll("\n", "<br>")}</p>`
@@ -87,9 +117,13 @@ export async function copyClips(clips: Clip[], separator = "\n\n"): Promise<Copy
       await navigator.clipboard.write([new ClipboardItem({ "image/png": png })])
       return "copied"
     }
-    const items: Record<string, Blob> = { "text/plain": new Blob([first.text], { type: "text/plain" }) }
+    const items: Record<string, Blob | Promise<Blob>> = { "text/plain": new Blob([first.text], { type: "text/plain" }) }
     const html = first.html ?? (first.kind === "link" ? linkHtml(first.text) : undefined)
-    if (html) items["text/html"] = new Blob([html], { type: "text/html" })
+    if (html)
+      items["text/html"] =
+        first.kind === "note"
+          ? inlineNoteImages(html).then((inlined) => new Blob([inlined], { type: "text/html" }))
+          : new Blob([html], { type: "text/html" })
     await navigator.clipboard.write([new ClipboardItem(items)])
     return "copied"
   }

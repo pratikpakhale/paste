@@ -4,6 +4,7 @@ import type { KindGroup, View } from "@/state/ui"
 import { KIND_ICON } from "./kind-icons"
 
 export const GROUPS: { group: KindGroup; label: string; icon: LucideIcon }[] = [
+  { group: "notes", label: "Notes", icon: KIND_ICON.note },
   { group: "text", label: "Text", icon: KIND_ICON.text },
   { group: "code", label: "Code", icon: KIND_ICON.code },
   { group: "links", label: "Links", icon: KIND_ICON.link },
@@ -15,6 +16,8 @@ export const GROUPS: { group: KindGroup; label: string; icon: LucideIcon }[] = [
 
 export function viewTitle(view: View, spaces: Space[]): string {
   switch (view.type) {
+    case "write":
+      return "Write"
     case "all":
       return "All clips"
     case "pinned":

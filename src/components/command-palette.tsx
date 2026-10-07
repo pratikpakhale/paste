@@ -11,6 +11,7 @@ import {
   ListOrdered,
   type LucideIcon,
   Monitor,
+  NotebookPen,
   PanelLeft,
   PencilLine,
   Moon,
@@ -38,7 +39,9 @@ import { clipLabel, kindLabel } from "@/lib/format"
 import { useSearch } from "@/lib/search"
 import { requestRename } from "@/lib/ui-events"
 import { newSpace, useActions } from "@/state/actions"
+import { isBlankNote } from "@/db/schema"
 import { useData } from "@/state/data"
+import { goWrite, newNote, openNote } from "@/state/notes"
 import { useUi, type View } from "@/state/ui"
 import { ClipThumb, SpaceDot } from "./clip-visual"
 import { GROUPS } from "./views"
@@ -90,10 +93,18 @@ const go = (view: View) => () => ui().setView(view)
 
 function RootCommands({ defer }: { defer: (run: () => void) => void }) {
   const [query, setQuery] = useState("")
-  const { live, spaces, counts, visible } = useData()
+  const { live, spaces, counts, visible, byId } = useData()
   const actions = useActions()
   const { setTheme } = useTheme()
-  const selected = useUi((s) => s.selected)
+  const listSelection = useUi((s) => s.selected)
+  const writing = useUi((s) => s.view.type === "write")
+  const noteId = useUi((s) => s.note)
+  // Write hides the list, so its selection is out of sight; commands act on the note being written instead.
+  const note = writing && noteId ? byId.get(noteId) : undefined
+  const selected = useMemo(
+    () => (!writing ? listSelection : note && !isBlankNote(note) && note.deletedAt === null ? [note.id] : []),
+    [writing, listSelection, note],
+  )
   const hits = useSearch(live, query)
 
   const clipResults = useMemo(() => {
@@ -106,7 +117,13 @@ function RootCommands({ defer }: { defer: (run: () => void) => void }) {
     const many = selected.length > 1
     const clipActions: Item[] = hasSelection
       ? [
-          { id: "copy", label: many ? `Copy ${selected.length} clips` : "Copy", icon: Copy, keys: "↵", run: () => void actions.copy() },
+          {
+            id: "copy",
+            label: many ? `Copy ${selected.length} clips` : writing ? "Copy note" : "Copy",
+            icon: Copy,
+            keys: writing ? undefined : "↵",
+            run: () => void actions.copy(selected),
+          },
           ...(many
             ? [
                 {
@@ -115,22 +132,49 @@ function RootCommands({ defer }: { defer: (run: () => void) => void }) {
                   icon: ListOrdered,
                   keys: "Q",
                   keywords: "queue sequence",
-                  run: () => void actions.startQueue(),
+                  run: () => void actions.startQueue(selected),
                 },
               ]
             : []),
           ...(many
             ? []
             : [{ id: "rename", label: "Rename", icon: PencilLine, keys: "R", keywords: "title name", focuses: true, run: requestRename }]),
-          { id: "pin", label: "Pin / unpin", icon: Pin, keys: "P", run: () => void actions.togglePin() },
-          { id: "move", label: "Move to space…", icon: FolderInput, keys: "M", run: () => ui().setOverlay("move") },
-          { id: "download", label: "Download", icon: Download, keys: "D", run: () => void actions.download() },
-          { id: "trash", label: "Move to trash", icon: Trash2, keys: "⌫", keywords: "delete remove", run: () => void actions.trash() },
+          { id: "pin", label: "Pin / unpin", icon: Pin, keys: writing ? undefined : "P", run: () => void actions.togglePin(selected) },
+          {
+            id: "move",
+            label: "Move to space…",
+            icon: FolderInput,
+            keys: writing ? undefined : "M",
+            run: () => {
+              // The move dialog works on the selection.
+              ui().setSelection(selected, selected[0] ?? null)
+              ui().setOverlay("move")
+            },
+          },
+          {
+            id: "download",
+            label: "Download",
+            icon: Download,
+            keys: writing ? undefined : "D",
+            run: () => void actions.download(selected),
+          },
+          {
+            id: "trash",
+            label: "Move to trash",
+            icon: Trash2,
+            keys: writing ? undefined : "⌫",
+            keywords: "delete remove",
+            // Write moves on to a fresh note, as the trash button does.
+            run: async () => {
+              await actions.trash(selected)
+              if (writing) await newNote()
+            },
+          },
         ]
       : []
 
     const general: Item[] = [
-      { id: "new", label: "New clip", icon: Plus, keys: "N", keywords: "write create note", run: () => ui().setOverlay("composer") },
+      { id: "new", label: "New note", icon: Plus, keys: "N", keywords: "write create clip scratch", run: () => void newNote() },
       {
         id: "new-space",
         label: "New space",
@@ -139,13 +183,17 @@ function RootCommands({ defer }: { defer: (run: () => void) => void }) {
         focuses: true,
         run: () => void newSpace(),
       },
-      {
-        id: "select-all",
-        label: "Select all in view",
-        icon: ListOrdered,
-        keys: "⌘A",
-        run: () => ui().setSelection(visible.map((c) => c.id)),
-      },
+      ...(writing
+        ? []
+        : [
+            {
+              id: "select-all",
+              label: "Select all in view",
+              icon: ListOrdered,
+              keys: "⌘A",
+              run: () => ui().setSelection(visible.map((c) => c.id)),
+            },
+          ]),
       {
         id: "sidebar",
         label: "Toggle sidebar",
@@ -176,6 +224,7 @@ function RootCommands({ defer }: { defer: (run: () => void) => void }) {
     ]
 
     const navigation: Item[] = [
+      { id: "go-write", label: "Write", icon: NotebookPen, keys: "W", keywords: "note scratch editor back", run: () => void goWrite() },
       { id: "go-all", label: "All clips", icon: Inbox, keys: "G A", run: go({ type: "all" }) },
       { id: "go-pinned", label: "Pinned", icon: Pin, keys: "G P", run: go({ type: "pinned" }) },
       ...GROUPS.filter((g) => counts.kinds[g.group] > 0).map((g) => ({
@@ -189,11 +238,11 @@ function RootCommands({ defer }: { defer: (run: () => void) => void }) {
     ]
 
     return [
-      { heading: "Selection", items: clipActions },
+      { heading: writing ? "This note" : "Selection", items: clipActions },
       { heading: "Go to", items: navigation },
       { heading: "Commands", items: general },
     ]
-  }, [actions, counts, selected, setTheme, spaces, visible])
+  }, [actions, counts, selected, setTheme, spaces, visible, writing])
 
   const words = query.toLowerCase().split(/\s+/).filter(Boolean)
   const filtered = words.length ? groups.map(({ heading, items }) => ({ heading, items: items.filter((i) => matches(i, words)) })) : groups
@@ -201,6 +250,8 @@ function RootCommands({ defer }: { defer: (run: () => void) => void }) {
   const reveal = (id: string) => {
     const clip = live.find((c) => c.id === id)
     if (!clip) return
+    // Notes are for writing in, so they open where that happens.
+    if (clip.kind === "note") return openNote(id)
     const state = useUi.getState()
     if (!visible.some((c) => c.id === id)) state.setView(clip.spaceId ? { type: "space", id: clip.spaceId } : { type: "all" })
     useUi.getState().setSelection([id], id)

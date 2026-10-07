@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils"
 import type { Clip } from "@/db/schema"
 import { requestEdit } from "@/lib/ui-events"
 import { useData } from "@/state/data"
+import { openNote } from "@/state/notes"
 import { useUi } from "@/state/ui"
 import { ClipItem } from "./clip-item"
 
@@ -15,7 +16,7 @@ function timestampFor(clip: Clip, sort: string): number {
 }
 
 export function ClipList() {
-  const { visible, canReorder, spaces, ready } = useData()
+  const { visible, canReorder, spaces, ready, byId } = useData()
   const layout = useUi((s) => s.layout)
   const view = useUi((s) => s.view)
   const sort = useUi((s) => s.sort)
@@ -48,10 +49,16 @@ export function ClipList() {
     },
     [ids],
   )
-  const onOpen = useCallback((id: string) => {
-    useUi.getState().setSelection([id], id)
-    requestEdit()
-  }, [])
+  const onOpen = useCallback(
+    (id: string) => {
+      // A live note opens full size in Write; other clips are edited in place.
+      const clip = byId.get(id)
+      if (clip?.kind === "note" && clip.deletedAt === null) return openNote(id)
+      useUi.getState().setSelection([id], id)
+      requestEdit()
+    },
+    [byId],
+  )
   const onContextMenu = useCallback(
     (id: string) => {
       if (!useUi.getState().selected.includes(id)) useUi.getState().select(id, "replace", ids)

@@ -85,7 +85,7 @@ export default defineConfig(({ mode }) => {
           display: "standalone",
           start_url: "/",
           scope: "/",
-          shortcuts: [{ name: "New clip", short_name: "New", url: "/?new" }],
+          shortcuts: [{ name: "New note", short_name: "New", url: "/?new" }],
         },
         workbox: {
           // Everything, including lazily-loaded Shiki grammars, so the app works fully offline.

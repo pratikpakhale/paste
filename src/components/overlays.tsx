@@ -13,79 +13,32 @@ import {
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Kbd } from "@/components/ui/kbd"
+import { usePageInput } from "@/hooks/use-page-input"
 import { hasTransferContent, readTransfer } from "@/lib/clipboard"
 import { clipLabel } from "@/lib/format"
 import { useActions } from "@/state/actions"
 import { useConfirmState } from "@/state/confirm"
 import { useData } from "@/state/data"
 import { useUi } from "@/state/ui"
-import { ClipThumb, SpaceDot } from "./clip-visual"
+import { ClipThumb } from "./clip-visual"
 import { viewTitle } from "./views"
-
-export function Composer() {
-  const open = useUi((s) => s.overlay === "composer")
-  const view = useUi((s) => s.view)
-  const { spaces } = useData()
-  const actions = useActions()
-  const [text, setText] = useState("")
-
-  const close = () => {
-    useUi.getState().setOverlay(null)
-    setText("")
-  }
-  const save = () => {
-    if (text.trim()) void actions.ingest([{ type: "text", text }])
-    close()
-  }
-
-  return (
-    <Dialog open={open} onOpenChange={(next) => !next && close()}>
-      <DialogContent showCloseButton={false} className="top-[16%] translate-y-0 gap-0 p-0 sm:max-w-xl">
-        <DialogHeader className="h-12 flex-row items-center gap-2.5 border-b px-5">
-          <DialogTitle className="text-sm font-medium">New clip</DialogTitle>
-          <DialogDescription className="sr-only">Write a clip. Its type is detected when saved.</DialogDescription>
-          {view.type === "space" && (
-            <span className="flex h-5 items-center gap-1.5 rounded-full border px-2 text-caption text-muted-foreground">
-              <SpaceDot id={view.id} className="size-1.5" />
-              {viewTitle(view, spaces)}
-            </span>
-          )}
-        </DialogHeader>
-        <textarea
-          autoFocus
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
-              e.preventDefault()
-              save()
-            }
-          }}
-          placeholder="Write or paste… type is detected automatically"
-          className="[field-sizing:content] max-h-[55vh] min-h-48 resize-none bg-transparent px-5 py-4 text-title leading-relaxed outline-none placeholder:text-subtle"
-        />
-        <div className="flex h-12 items-center gap-2 border-t pr-3 pl-5">
-          <span className="mr-auto flex items-center gap-1.5 text-caption text-subtle">
-            <Kbd>⌘↵</Kbd> to save
-          </span>
-          <Button variant="ghost" size="sm" onClick={close}>
-            Cancel
-          </Button>
-          <Button size="sm" disabled={!text.trim()} onClick={save}>
-            Save
-          </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
-  )
-}
 
 const SHORTCUTS: { group: string; items: [string, string][] }[] = [
   {
+    group: "Write",
+    items: [
+      ["N", "New note"],
+      ["W", "Back to your note"],
+      ["⌘ V", "Paste into the note"],
+      ["↑", "On a blank note: continue the last one"],
+      ["Esc", "Leave the editor"],
+      ["↵ / E", "Back into the editor"],
+    ],
+  },
+  {
     group: "Capture",
     items: [
-      ["⌘ V", "Paste as a new clip"],
-      ["N", "Write a new clip"],
+      ["⌘ V", "In a list: paste as a new clip"],
       ["Drop", "Files, images or text anywhere"],
     ],
   },
@@ -234,6 +187,7 @@ export function DropZone() {
   const actions = useActions()
   const { spaces } = useData()
   const view = useUi((s) => s.view)
+  const { target: dropTarget, deliver } = usePageInput(actions)
 
   useEffect(() => {
     // `dragstart` only fires for drags that begin inside this page (e.g. selected text).
@@ -259,9 +213,10 @@ export function DropZone() {
     const drop = (e: DragEvent) => {
       depth.current = 0
       setActive(false)
-      if (!e.dataTransfer || !external(e)) return
+      // The note editor already took a drop that landed on it.
+      if (!e.dataTransfer || !external(e) || e.defaultPrevented) return
       e.preventDefault()
-      void actions.ingest(readTransfer(e.dataTransfer))
+      deliver(readTransfer(e.dataTransfer))
     }
     window.addEventListener("dragstart", start)
     window.addEventListener("dragend", end)
@@ -277,10 +232,11 @@ export function DropZone() {
       window.removeEventListener("dragleave", leave)
       window.removeEventListener("drop", drop)
     }
-  }, [actions])
+  }, [deliver])
 
   if (!active) return null
-  const target = view.type === "space" ? viewTitle(view, spaces) : "All clips"
+  const where = dropTarget()
+  const target = where !== "clips" ? "this note" : view.type === "space" ? viewTitle(view, spaces) : "All clips"
   return (
     <div className="pointer-events-none fixed inset-0 z-50 flex animate-in items-center justify-center bg-background/70 backdrop-blur-sm fade-in">
       <div className="flex flex-col items-center gap-3 rounded-2xl border-2 border-dashed border-primary/50 bg-card/80 px-14 py-10 shadow-2xl">

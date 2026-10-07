@@ -9,12 +9,13 @@ import {
   Eye,
   FolderInput,
   ListOrdered,
+  Maximize2,
   PencilLine,
   Pin,
   Trash2,
   X,
 } from "lucide-react"
-import { type ReactNode, useEffect, useLayoutEffect, useRef, useState } from "react"
+import { lazy, type ReactNode, Suspense, useEffect, useLayoutEffect, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import {
@@ -36,10 +37,14 @@ import { cn } from "@/lib/utils"
 import { useActions } from "@/state/actions"
 import { onEditRequest, onRenameRequest } from "@/lib/ui-events"
 import { useData } from "@/state/data"
+import { openNote } from "@/state/notes"
 import { useUi } from "@/state/ui"
 import { CodeView, ColorView, FileCard, ImageView, JsonView, LinkView, MarkdownView, MediaView, PdfView, TextEditor } from "./clip-body"
 import { ClipThumb, SpaceDot } from "./clip-visual"
 import { Segmented } from "./segmented"
+
+/** The rich-text editor stays out of the first load; only notes need it. */
+export const NoteEditor = lazy(() => import("./note-editor"))
 
 export function DetailPane() {
   const { byId } = useData()
@@ -52,7 +57,7 @@ export function DetailPane() {
   return <ClipDetail key={clip.id} clip={clip} />
 }
 
-function IconAction({
+export function IconAction({
   label,
   keys,
   onClick,
@@ -93,7 +98,7 @@ const storedName = (clip: Clip) => (isFileClip(clip) ? clip.file.name : clip.tit
  * The clip's name in the detail header. Reads as text with a hover affordance; a click, R or "Rename" swaps in
  * an input over the exact same box, so nothing moves. Files start with just the base name selected.
  */
-function NameField({ clip }: { clip: Clip }) {
+export function NameField({ clip }: { clip: Clip }) {
   const isFile = isFileClip(clip)
   const stored = storedName(clip)
   /** `null` while not editing. */
@@ -171,7 +176,7 @@ function NameField({ clip }: { clip: Clip }) {
 }
 
 /** Shows a check when the clip is copied by any route (button, ↵, menu), at a fixed width so nothing shifts. */
-function CopyButton({ clip }: { clip: Clip }) {
+export function CopyButton({ clip }: { clip: Clip }) {
   const actions = useActions()
   const [seen, setSeen] = useState(clip.copiedAt)
   const copied = clip.copiedAt !== seen
@@ -255,6 +260,7 @@ function ClipDetail({ clip }: { clip: Clip }) {
   )
 }
 
+/** Kinds a text clip can be switched between. A note's content is a document, not text, so it isn't one. */
 const TEXT_KIND_OPTIONS: TextKind[] = ["text", "markdown", "code", "json", "link", "color"]
 
 interface ModeProps {
@@ -262,42 +268,57 @@ interface ModeProps {
   onEditingChange: (editing: boolean) => void
 }
 
-function Toolbar({ clip, editing, onEditingChange }: { clip: Clip } & ModeProps) {
+/** Which space the clip is in, and the menu to move it. */
+export function SpacePicker({ clip }: { clip: Clip }) {
   const { spaces } = useData()
   const actions = useActions()
   const space = spaces.find((s) => s.id === clip.spaceId)
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="xs" className="text-muted-foreground">
+          {space ? <SpaceDot id={space.id} /> : <FolderInput />}
+          {space?.name ?? "No space"}
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="w-48">
+        {spaces.map((s) => (
+          <DropdownMenuItem key={s.id} onSelect={() => void actions.moveTo(s.id, [clip.id])}>
+            <SpaceDot id={s.id} /> {s.name}
+            {s.id === clip.spaceId && <Check className="ml-auto" />}
+          </DropdownMenuItem>
+        ))}
+        {spaces.length > 0 && <DropdownMenuSeparator />}
+        <DropdownMenuItem onSelect={() => void actions.moveTo(null, [clip.id])}>
+          No space
+          {clip.spaceId === null && <Check className="ml-auto" />}
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
+
+function Toolbar({ clip, editing, onEditingChange }: { clip: Clip } & ModeProps) {
   const extension = isFileClip(clip) && fileExtension(clip.file.name)
 
   return (
     <div className="flex h-10 shrink-0 items-center gap-1 border-b px-3">
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="xs" className="text-muted-foreground">
-            {space ? <SpaceDot id={space.id} /> : <FolderInput />}
-            {space?.name ?? "No space"}
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="w-48">
-          {spaces.map((s) => (
-            <DropdownMenuItem key={s.id} onSelect={() => void actions.moveTo(s.id, [clip.id])}>
-              <SpaceDot id={s.id} /> {s.name}
-              {s.id === clip.spaceId && <Check className="ml-auto" />}
-            </DropdownMenuItem>
-          ))}
-          {spaces.length > 0 && <DropdownMenuSeparator />}
-          <DropdownMenuItem onSelect={() => void actions.moveTo(null, [clip.id])}>
-            No space
-            {clip.spaceId === null && <Check className="ml-auto" />}
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+      <SpacePicker clip={clip} />
 
       <span className="h-3.5 w-px bg-border" />
-      {isFileClip(clip) ? (
-        <span className="px-2 text-caption text-muted-foreground">
-          {kindLabel(clip.kind)}
-          {extension && <span className="text-subtle"> · {extension}</span>}
-        </span>
+      {isFileClip(clip) || clip.kind === "note" ? (
+        <>
+          <span className="px-2 text-caption text-muted-foreground">
+            {kindLabel(clip.kind)}
+            {extension && <span className="text-subtle"> · {extension}</span>}
+          </span>
+          {clip.kind === "note" && (
+            <Button variant="ghost" size="xs" className="ml-auto text-muted-foreground" onClick={() => openNote(clip.id)}>
+              <Maximize2 /> Open in Write
+            </Button>
+          )}
+        </>
       ) : (
         <>
           <DropdownMenu>
@@ -399,6 +420,12 @@ function Body({ clip, editing }: { clip: Clip; editing: boolean }) {
   }
 
   const textClip = clip
+  if (textClip.kind === "note")
+    return (
+      <Suspense>
+        <NoteEditor clip={textClip} readOnly={textClip.deletedAt !== null} />
+      </Suspense>
+    )
   const mono = textClip.kind === "code" || textClip.kind === "json"
   if (editing || textClip.kind === "text") return <TextEditor clip={textClip} mono={mono} autoFocus={editing} />
 
@@ -561,7 +588,7 @@ function BigAction({
 function EmptyDetail() {
   const rows: [string, string][] = [
     ["⌘V", "Paste anything"],
-    ["N", "Write a new clip"],
+    ["N", "Write a new note"],
     ["J K", "Move through clips"],
     ["↵", "Copy selected"],
     ["⇧ click", "Select a range"],

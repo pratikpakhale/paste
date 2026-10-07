@@ -1,6 +1,7 @@
 import { type Clip, isFileClip } from "@/db/schema"
 
 const KIND_LABEL: Record<Clip["kind"], string> = {
+  note: "Note",
   text: "Text",
   markdown: "Markdown",
   code: "Code",
@@ -35,7 +36,14 @@ export function clipLabel(clip: Clip): string {
       .trim()
       .replace(/^https?:\/\/(www\.)?/, "")
       .replace(/\/$/, "")
+  // A note can hold nothing but images.
+  if (clip.kind === "note" && !clip.text.trim()) return noteImages(clip) ? "Image note" : "Untitled note"
   return firstLine(clip.text)
+}
+
+/** How many images a note shows, from its HTML snapshot. */
+function noteImages(clip: Clip): number {
+  return isFileClip(clip) || !clip.html ? 0 : (clip.html.match(/<img\b/g)?.length ?? 0)
 }
 
 /** Index where a file name's extension starts (at its dot), or the length when it has none. Dotfiles have no extension. */
@@ -70,6 +78,13 @@ export function clipDetail(clip: Clip): string {
     return parts.join(" · ")
   }
   if (clip.kind === "code" && clip.language) return clip.language
+  if (clip.kind === "note") {
+    const words = clip.text.split(/\s+/).filter(Boolean).length
+    const images = noteImages(clip)
+    const parts = [`${words} word${words === 1 ? "" : "s"}`]
+    if (images) parts.push(`${images} image${images === 1 ? "" : "s"}`)
+    return parts.join(" · ")
+  }
   const lines = clip.text.split("\n").length
   return lines > 1 ? `${lines} lines` : `${clip.text.length} chars`
 }

@@ -1,15 +1,9 @@
-import { useEffect } from "react"
 import { type Options, useHotkeys } from "react-hotkeys-hook"
-import { readTransfer } from "@/lib/clipboard"
 import { requestEdit, requestRename, requestSearch } from "@/lib/ui-events"
 import type { Actions } from "@/state/actions"
 import { useData } from "@/state/data"
+import { goWrite, newNote } from "@/state/notes"
 import { useUi } from "@/state/ui"
-
-function isEditable(target: EventTarget | null): boolean {
-  if (!(target instanceof HTMLElement)) return false
-  return target.isContentEditable || target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.tagName === "SELECT"
-}
 
 /** Menus and dialogs own their keyboard; global shortcuts must not fire underneath them. */
 function insideOverlay(e: KeyboardEvent): boolean {
@@ -20,26 +14,15 @@ function hasTextSelection(): boolean {
   return Boolean(window.getSelection()?.toString())
 }
 
-/** ⌘V anywhere outside a text field becomes a new clip. */
-export function usePasteCapture(actions: Actions) {
-  useEffect(() => {
-    const onPaste = (e: ClipboardEvent) => {
-      if (isEditable(e.target) || !e.clipboardData) return
-      if (useUi.getState().overlay !== null) return
-      e.preventDefault()
-      void actions.ingest(readTransfer(e.clipboardData))
-    }
-    document.addEventListener("paste", onPaste)
-    return () => document.removeEventListener("paste", onPaste)
-  }, [actions])
-}
-
 export function useShortcuts(actions: Actions) {
   const { visible } = useData()
   const overlay = useUi((s) => s.overlay)
   const inTrash = useUi((s) => s.view.type === "trash")
+  const writing = useUi((s) => s.view.type === "write")
   const enabled = overlay === null
   const opts: Options = { enabled, preventDefault: true, ignoreEventWhen: insideOverlay }
+  /** Keys that act on the list's selection. Write hides the list, so they'd act on clips nobody can see. */
+  const list: Options = { ...opts, enabled: enabled && !writing }
   const ui = useUi.getState
 
   const moveCursor = (delta: number, extend: boolean) => {
@@ -57,17 +40,24 @@ export function useShortcuts(actions: Actions) {
     else ui().setSelection([next.id], next.id)
   }
 
-  useHotkeys("mod+k", () => ui().setOverlay(overlay === "palette" ? null : "palette"), { preventDefault: true, enableOnFormTags: true })
-  useHotkeys("slash", () => requestSearch(), opts)
+  useHotkeys("mod+k", () => ui().setOverlay(overlay === "palette" ? null : "palette"), {
+    preventDefault: true,
+    enableOnFormTags: true,
+    enableOnContentEditable: true,
+  })
+  // Write has no filter box; search everything instead.
+  useHotkeys("slash", () => (writing ? ui().setOverlay("palette") : requestSearch()), opts, [writing])
+  useHotkeys("enter", () => requestEdit(), { ...opts, enabled: enabled && writing })
   useHotkeys("shift+slash", () => ui().setOverlay("shortcuts"), opts)
-  useHotkeys("n", () => ui().setOverlay("composer"), opts)
+  useHotkeys("n", () => void newNote(), opts)
+  useHotkeys("w", () => void goWrite(), opts)
 
-  useHotkeys(["j", "down"], () => moveCursor(1, false), opts, [visible])
-  useHotkeys(["k", "up"], () => moveCursor(-1, false), opts, [visible])
-  useHotkeys(["shift+j", "shift+down"], () => moveCursor(1, true), opts, [visible])
-  useHotkeys(["shift+k", "shift+up"], () => moveCursor(-1, true), opts, [visible])
-  useHotkeys("home", () => visible[0] && ui().setSelection([visible[0].id]), opts, [visible])
-  useHotkeys("end", () => visible.at(-1) && ui().setSelection([visible.at(-1)!.id]), opts, [visible])
+  useHotkeys(["j", "down"], () => moveCursor(1, false), list, [visible])
+  useHotkeys(["k", "up"], () => moveCursor(-1, false), list, [visible])
+  useHotkeys(["shift+j", "shift+down"], () => moveCursor(1, true), list, [visible])
+  useHotkeys(["shift+k", "shift+up"], () => moveCursor(-1, true), list, [visible])
+  useHotkeys("home", () => visible[0] && ui().setSelection([visible[0].id]), list, [visible])
+  useHotkeys("end", () => visible.at(-1) && ui().setSelection([visible.at(-1)!.id]), list, [visible])
   useHotkeys(
     "mod+a",
     () =>
@@ -75,7 +65,7 @@ export function useShortcuts(actions: Actions) {
         visible.map((c) => c.id),
         visible[0]?.id ?? null,
       ),
-    opts,
+    list,
     [visible],
   )
 
@@ -86,7 +76,7 @@ export function useShortcuts(actions: Actions) {
       else if (ui().query) ui().setQuery("")
       else ui().clearSelection()
     },
-    { ...opts, preventDefault: false },
+    { ...list, preventDefault: false },
   )
 
   useHotkeys(
@@ -96,7 +86,7 @@ export function useShortcuts(actions: Actions) {
       if (inTrash) return
       void actions.copy()
     },
-    opts,
+    list,
     [actions, inTrash],
   )
   useHotkeys(
@@ -108,15 +98,15 @@ export function useShortcuts(actions: Actions) {
       if (ui().queue) return void actions.copyNextInQueue()
       void actions.copy()
     },
-    { ...opts, preventDefault: false },
+    { ...list, preventDefault: false },
     [actions],
   )
-  useHotkeys("shift+enter", () => void actions.copy(undefined, "\n"), opts, [actions])
-  useHotkeys("q", () => void actions.startQueue(), opts, [actions])
+  useHotkeys("shift+enter", () => void actions.copy(undefined, "\n"), list, [actions])
+  useHotkeys("q", () => void actions.startQueue(), list, [actions])
 
-  useHotkeys("p", () => void actions.togglePin(), opts, [actions])
-  useHotkeys("m", () => ui().selected.length && ui().setOverlay("move"), opts)
-  useHotkeys("d", () => void actions.download(), opts, [actions])
+  useHotkeys("p", () => void actions.togglePin(), list, [actions])
+  useHotkeys("m", () => ui().selected.length && ui().setOverlay("move"), list)
+  useHotkeys("d", () => void actions.download(), list, [actions])
   useHotkeys("e", () => requestEdit(), opts)
   useHotkeys(
     "r",
@@ -127,12 +117,12 @@ export function useShortcuts(actions: Actions) {
     opts,
     [actions, inTrash],
   )
-  useHotkeys(["backspace", "delete"], () => void (inTrash ? actions.destroy() : actions.trash()), opts, [actions, inTrash])
+  useHotkeys(["backspace", "delete"], () => void (inTrash ? actions.destroy() : actions.trash()), list, [actions, inTrash])
 
-  useHotkeys("alt+up", () => void actions.nudge("up"), opts, [actions])
-  useHotkeys("alt+down", () => void actions.nudge("down"), opts, [actions])
-  useHotkeys("alt+shift+up", () => void actions.nudge("top"), opts, [actions])
-  useHotkeys("alt+shift+down", () => void actions.nudge("bottom"), opts, [actions])
+  useHotkeys("alt+up", () => void actions.nudge("up"), list, [actions])
+  useHotkeys("alt+down", () => void actions.nudge("down"), list, [actions])
+  useHotkeys("alt+shift+up", () => void actions.nudge("top"), list, [actions])
+  useHotkeys("alt+shift+down", () => void actions.nudge("bottom"), list, [actions])
 
   useHotkeys(["bracketleft", "mod+backslash"], () => ui().setSidebarOpen(!ui().sidebarOpen), opts)
 

@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test"
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react"
-import { addClips } from "@/db/actions"
-import { db } from "@/db/schema"
+import { addClips, saveNoteSnapshot } from "@/db/actions"
+import { db, docUpdates } from "@/db/schema"
 import { useUi } from "@/state/ui"
 import { Root } from "./root"
 
@@ -10,8 +10,9 @@ import { Root } from "./root"
 const initialUi = useUi.getState()
 
 beforeEach(async () => {
-  await Promise.all([db.clips.clear(), db.spaces.clear(), db.blobs.clear()])
-  useUi.setState(initialUi, true)
+  await Promise.all([db.clips.clear(), db.spaces.clear(), db.blobs.clear(), docUpdates().clear()])
+  // Most tests drive the clip list; the app itself opens on a blank note.
+  useUi.setState({ ...initialUi, view: { type: "all" }, note: null }, true)
 })
 afterEach(cleanup)
 
@@ -101,13 +102,9 @@ describe("app", () => {
     await waitFor(async () => expect((await db.clips.get(secondId))?.deletedAt).not.toBeNull())
   })
 
-  test("opens the composer, palette and shortcuts", async () => {
+  test("opens the palette and shortcuts", async () => {
     render(<Root />)
     await screen.findByText("Paste anything")
-
-    press("n")
-    expect(await screen.findByPlaceholderText(/Write or paste/)).toBeTruthy()
-    act(() => useUi.getState().setOverlay(null))
 
     // react-hotkeys-hook maps `mod` to ⌘ on macOS and Ctrl elsewhere; happy-dom is not macOS.
     press("k", /mac/i.test(navigator.platform) ? { metaKey: true } : { ctrlKey: true })
@@ -184,5 +181,25 @@ describe("app", () => {
     expect(await screen.findByLabelText("Show sidebar")).toBeTruthy()
     press("[", { code: "BracketLeft" })
     expect(useUi.getState().sidebarOpen).toBe(true)
+  })
+
+  test("N opens a blank note that stays out of the lists until written in", async () => {
+    render(<Root />)
+    await screen.findByText("Paste anything")
+    press("n")
+    await waitFor(() => expect(useUi.getState().view.type).toBe("write"))
+    const id = useUi.getState().note!
+    expect(new URL(location.href).searchParams.get("note")).toBe(id)
+    expect((await db.clips.get(id))?.kind).toBe("note")
+    // The editor loads lazily, once the note's document is read.
+    expect(await screen.findByLabelText("Note", {}, { timeout: 3000 })).toBeTruthy()
+
+    act(() => useUi.getState().setView({ type: "all" }))
+    await screen.findAllByText("Paste anything")
+    expect(screen.queryByText("Empty")).toBeNull()
+
+    await saveNoteSnapshot(id, "Groceries\nmilk", "<p>Groceries</p><p>milk</p>")
+    // In the list and under Recent notes.
+    expect((await screen.findAllByText("Groceries")).length).toBe(2)
   })
 })

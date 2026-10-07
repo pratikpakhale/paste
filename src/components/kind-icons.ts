@@ -8,6 +8,7 @@ import {
   Heading,
   Image,
   Link2,
+  NotebookPen,
   type LucideIcon,
   Palette,
   TextAlignStart,
@@ -15,6 +16,7 @@ import {
 import type { Clip } from "@/db/schema"
 
 export const KIND_ICON: Record<Clip["kind"], LucideIcon> = {
+  note: NotebookPen,
   text: TextAlignStart,
   markdown: Heading,
   code: CodeXml,

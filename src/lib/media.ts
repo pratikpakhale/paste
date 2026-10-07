@@ -38,6 +38,18 @@ function loadImage(blob: Blob): Promise<HTMLImageElement> {
   })
 }
 
+/** An image's pixel size, without the thumbnail `imageInfo` makes. Empty when it can't be decoded. */
+export async function imageSize(blob: Blob): Promise<{ width?: number; height?: number }> {
+  try {
+    // Never hold up an insert on a decoder that doesn't answer.
+    const timeout = new Promise<never>((_, reject) => setTimeout(() => reject(new Error("timeout")), 2000))
+    const { naturalWidth: width, naturalHeight: height } = await Promise.race([loadImage(blob), timeout])
+    return width && height ? { width, height } : {}
+  } catch {
+    return {}
+  }
+}
+
 export async function imageInfo(blob: Blob): Promise<MediaInfo> {
   try {
     const img = await loadImage(blob)

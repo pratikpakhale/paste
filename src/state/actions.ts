@@ -219,19 +219,22 @@ export function useActions() {
       }
     }
 
-    async function ingest(inputs: ClipInput[]) {
-      if (!inputs.length) return
+    /** Adds what was pasted or dropped as clips, and selects them on screen. */
+    async function ingest(inputs: ClipInput[]): Promise<string[]> {
+      if (!inputs.length) return []
       const view = ui().view
       const spaceId = view.type === "space" ? view.id : null
       try {
         const ids = await addClips(inputs, spaceId)
-        if (!ids.length) return
+        if (!ids.length) return []
         // Make sure what was just pasted is on screen.
         if (view.type !== "space" && view.type !== "all") ui().setView({ type: "all" })
         ui().setQuery("")
         ui().setSelection(ids, ids[0])
+        return ids
       } catch (error) {
         reportError(error)
+        return []
       }
     }
 
