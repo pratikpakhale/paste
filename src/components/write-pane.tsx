@@ -54,11 +54,20 @@ function Frame({ header, footer, children, onBodyMouseDown }: FrameProps) {
   )
 }
 
+const BlankTitle = () => <span className="min-w-0 flex-1 truncate font-medium text-subtle">New note</span>
+const BlankHint = () => <span>Saved as you type, in every tab this note is open in</span>
+const BlankFooter = () => (
+  <footer className="flex h-10 shrink-0 items-center gap-5 px-5 text-caption whitespace-nowrap text-subtle">
+    <BlankHint />
+  </footer>
+)
+
 /** The note was deleted for good, most likely from another tab. */
 function Gone({ id }: { id: string }) {
   // A note that was just created isn't in the shared clip query yet; only say it's gone once the database agrees.
   const gone = useLiveQuery(async () => !(await db.clips.get(id)), [id], false)
-  if (!gone) return <Frame />
+  // Until then it's a note being opened as it's created, so it already looks like one: no blank flash in between.
+  if (!gone) return <Frame header={<BlankTitle />} footer={<BlankFooter />} />
   return (
     <Frame>
       <div className="flex h-full flex-col items-center justify-center gap-4 p-8 text-center">
@@ -92,7 +101,7 @@ function WriteNote({ clip }: { clip: TextClip }) {
 
   const header = (
     <>
-      {blank ? <span className="min-w-0 flex-1 truncate font-medium text-subtle">New note</span> : <NameField clip={clip} />}
+      {blank ? <BlankTitle /> : <NameField clip={clip} />}
       <div className="flex shrink-0 items-center gap-0.5">
         {others > 0 && (
           <span
@@ -119,7 +128,7 @@ function WriteNote({ clip }: { clip: TextClip }) {
   const footer = (
     <footer className="flex h-10 shrink-0 items-center gap-5 px-5 text-caption whitespace-nowrap text-subtle">
       {blank ? (
-        <span>Saved as you type, in every tab this note is open in</span>
+        <BlankHint />
       ) : (
         <>
           <span>{clipDetail(clip)}</span>

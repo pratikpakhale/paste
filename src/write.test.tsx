@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test"
 import type { Editor, JSONContent } from "@tiptap/core"
-import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react"
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react"
 import * as Y from "yjs"
 import { addClips, deleteForever, readNoteDoc, restoreClips, saveNoteSnapshot, trashClips } from "@/db/actions"
 import { type Clip, db, docUpdates, NOTE_FIELD, type TextClip } from "@/db/schema"
@@ -159,7 +159,8 @@ describe("write", () => {
     expect(await otherClips(id)).toHaveLength(0)
     // A note holding only an image isn't blank.
     await waitFor(async () => expect((await note(id))?.html).toContain(`data-blob="${blob}"`))
-    expect(header().textContent).not.toContain("New note")
+    // The blank note's placeholder title is gone; only the button to start another says "New note".
+    expect(within(header() as HTMLElement).queryByText("New note", { selector: "span" })).toBeNull()
     act(() => navigate({ view: { type: "all" } }))
     expect((await screen.findAllByText("Image note")).length).toBeGreaterThan(0)
     expect((await screen.findAllByText("0 words · 1 image")).length).toBeGreaterThan(0)
@@ -201,6 +202,38 @@ describe("write", () => {
     expect(image!.attrs!.src).toBeNull()
     expect((await note(id))?.blobs).toContain(image!.attrs!.blob)
     expect(editor.getText()).toContain("Look")
+  })
+
+  test("a new note from mid-sentence keeps the one being written", async () => {
+    const { id: first, editor } = await open()
+    typeInto(editor, "Draft plan")
+    await waitFor(async () => expect((await note(first))?.text).toBe("Draft plan"))
+
+    // From inside the editor, where N would just type.
+    act(
+      () =>
+        void fireEvent.keyDown(editor.view.dom, {
+          key: "o",
+          code: "KeyO",
+          shiftKey: true,
+          ...(/mac/i.test(navigator.platform) ? { metaKey: true } : { ctrlKey: true }),
+        }),
+    )
+    await waitFor(() => expect(getRoute().note).not.toBe(first))
+    expect((await note(first))?.text).toBe("Draft plan")
+    await editorFor(getRoute().note!)
+
+    // On a blank note the sidebar's Write is where you are; once it's written in, it starts the next one.
+    const write = () => screen.getByText(/^(Write|New note)$/, { selector: "nav button span" }).closest("button")!
+    expect(write().textContent).toBe("Write")
+    typeInto(await noteEditor(), "Second")
+    const second = getRoute().note!
+    await waitFor(async () => expect((await note(second))?.text).toBe("Second"))
+    await waitFor(() => expect(write().textContent).toBe("New note"))
+    act(() => void fireEvent.click(write()))
+    await waitFor(() => expect(getRoute().note).not.toBe(second))
+    expect((await note(second))?.deletedAt).toBeNull()
+    await waitFor(() => expect(write().textContent).toBe("Write"))
   })
 
   test("switching between notes keeps each one editable", async () => {

@@ -29,6 +29,7 @@ const SHORTCUTS: { group: string; items: [string, string][] }[] = [
     group: "Write",
     items: [
       ["N", "New note"],
+      ["⌘ ⇧ O", "New note, even while typing"],
       ["W", "Back to your note"],
       ["⌘ V", "Paste into the note"],
       ["↑", "On a blank note: continue the last one"],

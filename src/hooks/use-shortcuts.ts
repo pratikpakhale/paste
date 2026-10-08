@@ -51,6 +51,8 @@ export function useShortcuts(actions: Actions) {
   useHotkeys("enter", () => requestEdit(), { ...opts, enabled: enabled && writing })
   useHotkeys("shift+slash", () => ui().setOverlay("shortcuts"), opts)
   useHotkeys("n", () => void newNote(), opts)
+  // N types into the note while writing; this one works from inside it too.
+  useHotkeys("mod+shift+o", () => void newNote(), { ...opts, enableOnFormTags: true, enableOnContentEditable: true })
   useHotkeys("w", () => void goWrite(), opts)
 
   useHotkeys(["j", "down"], () => moveCursor(1, false), list, [visible])

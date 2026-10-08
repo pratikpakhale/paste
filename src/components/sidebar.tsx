@@ -10,6 +10,7 @@ import {
   Monitor,
   Moon,
   NotebookPen,
+  SquarePen,
   PanelLeft,
   Pin,
   Plus,
@@ -55,6 +56,9 @@ const go = (view: View) => navigate({ view })
 export function Sidebar() {
   const { counts, spaces, live } = useData()
   const view = useView()
+  const note = useNote()
+  // Once the open note has something in it, it's under Recent notes and Write starts the next one.
+  const written = view.type === "write" && live.some((c) => c.id === note)
   const { active } = useDndContext()
   const draggingClip = active?.data.current?.type === "clip"
   const open = useUi((s) => s.sidebarOpen)
@@ -92,7 +96,13 @@ export function Sidebar() {
 
         <nav className="mt-5 -mr-3 flex min-h-0 flex-1 scrollbar-thin flex-col gap-5 overflow-y-auto pr-3">
           <div className="flex flex-col gap-px">
-            <NavItem icon={NotebookPen} label="Write" count={0} active={view.type === "write"} onClick={() => void goWrite()} />
+            <NavItem
+              icon={written ? SquarePen : NotebookPen}
+              label={written ? "New note" : "Write"}
+              count={0}
+              active={view.type === "write" && !written}
+              onClick={() => void (written ? newNote() : goWrite())}
+            />
             <NavItem
               icon={Inbox}
               label="All clips"
