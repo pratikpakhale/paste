@@ -6,7 +6,7 @@ A local clipboard for everything you paste: text, code, links, colors, images, v
 
 - **Fully local.** Clips live in your browser's IndexedDB. Nothing is uploaded, and it works offline as an installable PWA.
 - **Your order.** Drag to reorder (or <kbd>⌥</kbd><kbd>↑</kbd> / <kbd>⌥</kbd><kbd>↓</kbd>). One global order is shared by every view, and dropping into the pinned block pins.
-- **Multi-copy.** Copy a selection as one clip, joined by line, or one by one with <kbd>Q</kbd> then <kbd>↵</kbd> for each next item.
+- **Multi-copy.** Tick clips (or <kbd>⌘</kbd><kbd>A</kbd>) and copy them as one clip, joined by line, or one by one with <kbd>Q</kbd> then <kbd>↵</kbd> for each next item.
 - **Keyboard-first.** <kbd>⌘</kbd><kbd>V</kbd> anywhere to capture, <kbd>J</kbd>/<kbd>K</kbd> to move, <kbd>⌘</kbd><kbd>K</kbd> for search and commands, <kbd>?</kbd> for everything else.
 - **Backups.** Export and import the whole library as a zip.
 

@@ -2,6 +2,7 @@ import { useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 import { Pin, Play } from "lucide-react"
 import { type CSSProperties, memo, type MouseEvent } from "react"
+import { Checkbox } from "@/components/ui/checkbox"
 import { cn } from "@/lib/utils"
 import { type Clip, isFileClip } from "@/db/schema"
 import { useBlobUrl } from "@/hooks/use-blob-url"
@@ -14,6 +15,8 @@ export interface ClipItemProps {
   clip: Clip
   layout: "list" | "grid"
   selected: boolean
+  /** Several clips are selected, so every card shows its checkbox. */
+  selecting: boolean
   isCursor: boolean
   /** 1-based copy position when several clips are selected. */
   position: number | null
@@ -25,6 +28,8 @@ export interface ClipItemProps {
   /** Another selected clip is being dragged, so this one travels with it. */
   dragging: boolean
   onSelect: (id: string, event: MouseEvent) => void
+  /** Adds or removes the clip from the selection; shift extends it as a range. */
+  onCheck: (id: string, event: MouseEvent) => void
   onOpen: (id: string) => void
   onContextMenu: (id: string) => void
 }
@@ -71,6 +76,23 @@ export const ClipItem = memo(function ClipItem(props: ClipItemProps) {
   )
 })
 
+/** Toggles the clip in the selection without the row's own click replacing it. */
+function SelectBox({ clip, selected, onCheck, className }: Pick<ClipItemProps, "clip" | "selected" | "onCheck"> & { className?: string }) {
+  return (
+    <Checkbox
+      checked={selected}
+      tabIndex={-1}
+      aria-label={`Select ${clipLabel(clip)}`}
+      onClick={(e) => {
+        e.stopPropagation()
+        onCheck(clip.id, e)
+      }}
+      onDoubleClick={(e) => e.stopPropagation()}
+      className={cn("cursor-pointer bg-background", className)}
+    />
+  )
+}
+
 function Position({ value, active }: { value: number; active?: boolean }) {
   return (
     <span
@@ -84,7 +106,7 @@ function Position({ value, active }: { value: number; active?: boolean }) {
   )
 }
 
-function RowBody({ clip, selected, isCursor, position, queuedNext, spaceName, timestamp }: ClipItemProps) {
+function RowBody({ clip, selected, isCursor, position, queuedNext, spaceName, timestamp, onCheck }: ClipItemProps) {
   return (
     <div
       className={cn(
@@ -94,6 +116,7 @@ function RowBody({ clip, selected, isCursor, position, queuedNext, spaceName, ti
         isCursor && position !== null && "ring-1 ring-primary/30 ring-inset",
       )}
     >
+      <SelectBox clip={clip} selected={selected} onCheck={onCheck} />
       <ClipThumb clip={clip} />
       <span className="min-w-0 shrink truncate">{clipLabel(clip)}</span>
       <span className="min-w-0 flex-1 truncate text-detail text-subtle">{clipDetail(clip)}</span>
@@ -160,7 +183,7 @@ function CardPreview({ clip }: { clip: Clip }) {
   )
 }
 
-function CardBody({ clip, selected, isCursor, position, queuedNext, timestamp }: ClipItemProps) {
+function CardBody({ clip, selected, selecting, isCursor, position, queuedNext, timestamp, onCheck }: ClipItemProps) {
   return (
     <div
       className={cn(
@@ -171,6 +194,15 @@ function CardBody({ clip, selected, isCursor, position, queuedNext, timestamp }:
     >
       <div className="relative aspect-[4/3] overflow-hidden border-b bg-muted/40">
         <CardPreview clip={clip} />
+        <SelectBox
+          clip={clip}
+          selected={selected}
+          onCheck={onCheck}
+          className={cn(
+            "absolute top-2 left-2 shadow-xs transition-opacity",
+            !selecting && "opacity-0 group-hover:opacity-100 focus-visible:opacity-100",
+          )}
+        />
         <div className="absolute top-2 right-2 flex items-center gap-1">
           {clip.pinned && (
             <span className="flex size-5 items-center justify-center rounded-full bg-background/80 backdrop-blur">

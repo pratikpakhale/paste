@@ -471,6 +471,7 @@ function MultiDetail({ ids }: { ids: string[] }) {
     ...visible.filter((c) => set.has(c.id)),
     ...ids.filter((id) => !visible.some((c) => c.id === id)).flatMap((id) => byId.get(id) ?? []),
   ]
+  const hasImages = clips.some((c) => c.kind === "image")
 
   return (
     <div className="flex h-full min-w-0 flex-col">
@@ -489,32 +490,62 @@ function MultiDetail({ ids }: { ids: string[] }) {
           </div>
         ) : (
           <>
-            <div className="flex flex-col gap-2">
-              <BigAction
-                primary
-                icon={Copy}
-                label="Copy all as one"
-                hint="Text joined by blank lines; images embedded where the target supports rich paste."
-                keys="↵"
-                onClick={() => void actions.copy(ids)}
-              />
-              <div className="grid grid-cols-2 gap-2">
+            {hasImages ? (
+              // The clipboard holds one image at a time, so only the queue carries every image everywhere.
+              <div className="flex flex-col gap-2">
                 <BigAction
+                  primary
                   icon={ListOrdered}
                   label="Copy one by one"
-                  hint="Copies #1, then ↵ for each next."
+                  hint="Each image goes on the clipboard as a real image. Paste, then ↵ for the next."
                   keys="Q"
                   onClick={() => void actions.startQueue(ids)}
                 />
-                <BigAction
-                  icon={CopyPlus}
-                  label="Join by line"
-                  hint="Single newline between clips."
-                  keys="⇧↵"
-                  onClick={() => void actions.copy(ids, "\n")}
-                />
+                <div className="grid grid-cols-2 gap-2">
+                  <BigAction
+                    icon={Copy}
+                    label="Copy all as one"
+                    hint="Images only come through in rich-text apps like Docs or Notion."
+                    keys="↵"
+                    onClick={() => void actions.copy(ids)}
+                  />
+                  <BigAction
+                    icon={Download}
+                    label="Download zip"
+                    hint="Every file, as it was pasted."
+                    keys="D"
+                    onClick={() => void actions.download(ids)}
+                  />
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="flex flex-col gap-2">
+                <BigAction
+                  primary
+                  icon={Copy}
+                  label="Copy all as one"
+                  hint="Text joined by blank lines."
+                  keys="↵"
+                  onClick={() => void actions.copy(ids)}
+                />
+                <div className="grid grid-cols-2 gap-2">
+                  <BigAction
+                    icon={ListOrdered}
+                    label="Copy one by one"
+                    hint="Copies #1, then ↵ for each next."
+                    keys="Q"
+                    onClick={() => void actions.startQueue(ids)}
+                  />
+                  <BigAction
+                    icon={CopyPlus}
+                    label="Join by line"
+                    hint="Single newline between clips."
+                    keys="⇧↵"
+                    onClick={() => void actions.copy(ids, "\n")}
+                  />
+                </div>
+              </div>
+            )}
             <div className="flex flex-wrap gap-1.5">
               <Button variant="outline" size="sm" onClick={() => void actions.togglePin(ids)}>
                 <Pin /> {clips.every((c) => c.pinned) ? "Unpin" : "Pin"}
@@ -522,9 +553,11 @@ function MultiDetail({ ids }: { ids: string[] }) {
               <Button variant="outline" size="sm" onClick={() => useUi.getState().setOverlay("move")}>
                 <FolderInput /> Move…
               </Button>
-              <Button variant="outline" size="sm" onClick={() => void actions.download(ids)}>
-                <Download /> Download zip
-              </Button>
+              {!hasImages && (
+                <Button variant="outline" size="sm" onClick={() => void actions.download(ids)}>
+                  <Download /> Download zip
+                </Button>
+              )}
               <Button variant="outline" size="sm" className="text-destructive" onClick={() => void actions.trash(ids)}>
                 <Trash2 /> Trash
               </Button>
@@ -591,7 +624,9 @@ function EmptyDetail() {
     ["N", "Write a new note"],
     ["J K", "Move through clips"],
     ["↵", "Copy selected"],
+    ["⌘ click", "Select several"],
     ["⇧ click", "Select a range"],
+    ["⌘A", "Select all"],
     ["Q", "Copy a selection one by one"],
     ["⌥↑ ⌥↓", "Rearrange"],
     ["⌘K", "Search & commands"],

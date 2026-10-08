@@ -1,6 +1,7 @@
 import { ArrowDownUp, LayoutGrid, List, Plus, Search, Trash2, X } from "lucide-react"
 import { useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -36,11 +37,15 @@ export function ListHeader() {
   const layout = useUi((s) => s.layout)
   const query = useUi((s) => s.query)
   const sidebarOpen = useUi((s) => s.sidebarOpen)
+  const selected = useUi((s) => s.selected)
   const search = useRef<HTMLInputElement>(null)
 
   useEffect(() => onSearchRequest(() => search.current?.focus()), [])
 
   const inTrash = view.type === "trash"
+  const selectedSet = new Set(selected)
+  const allSelected = visible.length > 0 && visible.every((c) => selectedSet.has(c.id))
+  const selecting = selected.length > 1
 
   // With the sidebar hidden, the fixed SidebarToggle sits over this header's left edge, so the title makes room.
   return (
@@ -51,9 +56,42 @@ export function ListHeader() {
       )}
     >
       <div className="flex min-w-0 items-center gap-2">
+        {visible.length > 0 && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Checkbox
+                aria-label={allSelected ? "Clear selection" : "Select all"}
+                checked={allSelected ? true : selecting ? "indeterminate" : false}
+                onCheckedChange={() => {
+                  const ui = useUi.getState()
+                  if (allSelected) ui.clearSelection()
+                  else
+                    ui.setSelection(
+                      visible.map((c) => c.id),
+                      visible[0]?.id ?? null,
+                    )
+                }}
+                className="mr-1 cursor-pointer"
+              />
+            </TooltipTrigger>
+            <TooltipContent>
+              {allSelected ? (
+                <>
+                  Clear selection <Kbd>Esc</Kbd>
+                </>
+              ) : (
+                <>
+                  Select all <Kbd>⌘A</Kbd>
+                </>
+              )}
+            </TooltipContent>
+          </Tooltip>
+        )}
         {view.type === "space" && <SpaceDot id={view.id} />}
         <h1 className="truncate font-medium">{viewTitle(view, spaces)}</h1>
-        <span className="text-subtle tabular-nums">{visible.length}</span>
+        <span className={cn("whitespace-nowrap tabular-nums", selecting ? "text-primary" : "text-subtle")}>
+          {selecting ? `${selected.length} of ${visible.length} selected` : visible.length}
+        </span>
       </div>
 
       <div className="ml-auto flex items-center gap-1.5">

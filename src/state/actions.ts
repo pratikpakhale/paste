@@ -67,7 +67,11 @@ export function useActions() {
           await downloadClips(clips)
           toast("Downloaded", { description: "Browsers can't put files on the clipboard." })
         } else {
-          toast.success(clips.length === 1 ? "Copied" : `Copied ${plural(clips.length, "clip")}`)
+          const images = clips.length > 1 && clips.some((c) => c.kind === "image")
+          toast.success(clips.length === 1 ? "Copied" : `Copied ${plural(clips.length, "clip")}`, {
+            // Only rich-text targets read the embedded images; everywhere else gets their names.
+            description: images ? "Images only paste into rich-text apps. Press Q to copy them one by one." : undefined,
+          })
         }
         await markCopied(clips.map((c) => c.id))
       } catch (error) {

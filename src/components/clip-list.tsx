@@ -49,6 +49,10 @@ export function ClipList() {
     },
     [ids],
   )
+  const onCheck = useCallback(
+    (id: string, event: MouseEvent) => useUi.getState().select(id, event.shiftKey ? "range" : "toggle", ids),
+    [ids],
+  )
   const onOpen = useCallback(
     (id: string) => {
       // A live note opens full size in Write; other clips are edited in place.
@@ -87,6 +91,7 @@ export function ClipList() {
       clip={clip}
       layout={layout}
       selected={selectedSet.has(clip.id)}
+      selecting={selected.length > 1}
       isCursor={cursor === clip.id}
       position={positions.get(clip.id) ?? null}
       queuedNext={queuedNext === clip.id}
@@ -95,6 +100,7 @@ export function ClipList() {
       sortable={canReorder}
       dragging={draggingGroup && clip.id !== activeId && selectedSet.has(clip.id)}
       onSelect={onSelect}
+      onCheck={onCheck}
       onOpen={onOpen}
       onContextMenu={onContextMenu}
     />
