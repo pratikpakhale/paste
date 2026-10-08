@@ -17,6 +17,7 @@ import { useActions } from "@/state/actions"
 import { useData } from "@/state/data"
 import { useUi } from "@/state/ui"
 import { SpaceDot } from "./clip-visual"
+import { useView } from "@/state/route"
 
 /**
  * Right-click menu for clips. Acts on the whole selection when the clicked clip is part of it.
@@ -38,7 +39,7 @@ function ClipMenuItems({ clipId, defer }: { clipId: string; defer: (run: () => v
   const actions = useActions()
   const { spaces, byId } = useData()
   const selected = useUi((s) => s.selected)
-  const inTrash = useUi((s) => s.view.type === "trash")
+  const inTrash = useView().type === "trash"
   const ids = selected.includes(clipId) ? selected : [clipId]
   const many = ids.length > 1
   const allPinned = ids.every((id) => byId.get(id)?.pinned)

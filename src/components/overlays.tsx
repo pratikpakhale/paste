@@ -22,6 +22,7 @@ import { useData } from "@/state/data"
 import { useUi } from "@/state/ui"
 import { ClipThumb } from "./clip-visual"
 import { viewTitle } from "./views"
+import { useView } from "@/state/route"
 
 const SHORTCUTS: { group: string; items: [string, string][] }[] = [
   {
@@ -186,7 +187,7 @@ export function DropZone() {
   const depth = useRef(0)
   const actions = useActions()
   const { spaces } = useData()
-  const view = useUi((s) => s.view)
+  const view = useView()
   const { target: dropTarget, deliver } = usePageInput(actions)
 
   useEffect(() => {

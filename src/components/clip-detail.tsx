@@ -42,6 +42,7 @@ import { useUi } from "@/state/ui"
 import { CodeView, ColorView, FileCard, ImageView, JsonView, LinkView, MarkdownView, MediaView, PdfView, TextEditor } from "./clip-body"
 import { ClipThumb, SpaceDot } from "./clip-visual"
 import { Segmented } from "./segmented"
+import { useView } from "@/state/route"
 
 /** The rich-text editor stays out of the first load; only notes need it. */
 export const NoteEditor = lazy(() => import("./note-editor"))
@@ -465,7 +466,7 @@ function Meta({ clip }: { clip: Clip }) {
 function MultiDetail({ ids }: { ids: string[] }) {
   const { visible, byId } = useData()
   const actions = useActions()
-  const inTrash = useUi((s) => s.view.type === "trash")
+  const inTrash = useView().type === "trash"
   const set = new Set(ids)
   const clips = [
     ...visible.filter((c) => set.has(c.id)),

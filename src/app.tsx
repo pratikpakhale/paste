@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils"
 import { useActions } from "@/state/actions"
 import { startSession } from "@/state/notes"
 import { useUi } from "@/state/ui"
+import { useView } from "@/state/route"
 
 export function App() {
   const actions = useActions()
@@ -23,7 +24,7 @@ export function App() {
   useShortcuts(actions)
   const layout = useDefaultLayout({ id: "paste:panes", storage: localStorage })
   const sidebarOpen = useUi((s) => s.sidebarOpen)
-  const writing = useUi((s) => s.view.type === "write")
+  const writing = useView().type === "write"
 
   useEffect(() => {
     void startSession()

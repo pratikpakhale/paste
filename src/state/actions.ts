@@ -20,6 +20,7 @@ import { clipLabel } from "@/lib/format"
 import { planMove } from "@/lib/order"
 import { confirm } from "./confirm"
 import { useData } from "./data"
+import { getRoute, navigate } from "./route"
 import { useUi } from "./ui"
 
 function plural(n: number, word: string) {
@@ -32,7 +33,7 @@ export async function newSpace() {
   const ui = useUi.getState()
   // The name is edited inline in the sidebar, so it has to be showing.
   ui.setSidebarOpen(true)
-  ui.setView({ type: "space", id })
+  navigate({ view: { type: "space", id } })
   ui.setRenamingSpace(id)
 }
 
@@ -171,7 +172,7 @@ export function useActions() {
     async function moveTo(spaceId: string | null, ids?: string[]) {
       const clips = resolve(ids)
       if (!clips.length) return
-      const view = ui().view
+      const { view } = getRoute()
       if (view.type === "space" && view.id !== spaceId) selectAfterRemoval(new Set(clips.map((c) => c.id)))
       await moveToSpace(
         clips.map((c) => c.id),
@@ -226,13 +227,13 @@ export function useActions() {
     /** Adds what was pasted or dropped as clips, and selects them on screen. */
     async function ingest(inputs: ClipInput[]): Promise<string[]> {
       if (!inputs.length) return []
-      const view = ui().view
+      const { view } = getRoute()
       const spaceId = view.type === "space" ? view.id : null
       try {
         const ids = await addClips(inputs, spaceId)
         if (!ids.length) return []
         // Make sure what was just pasted is on screen.
-        if (view.type !== "space" && view.type !== "all") ui().setView({ type: "all" })
+        if (view.type !== "space" && view.type !== "all") navigate({ view: { type: "all" } })
         ui().setQuery("")
         ui().setSelection(ids, ids[0])
         return ids

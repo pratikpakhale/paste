@@ -12,11 +12,12 @@ import { useData } from "@/state/data"
 import { newNote, openNote, useOtherTabs, useSaving } from "@/state/notes"
 import { useUi } from "@/state/ui"
 import { CopyButton, IconAction, NameField, NoteEditor, SpacePicker } from "./clip-detail"
+import { useNote } from "@/state/route"
 
 /** Write: this tab's note across the whole main area, with the clip list out of the way. */
 export function WritePane() {
   const { ready, byId } = useData()
-  const id = useUi((s) => s.note)
+  const id = useNote()
   const clip = id ? byId.get(id) : undefined
 
   if (!ready || !id) return <Frame />

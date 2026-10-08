@@ -42,9 +42,10 @@ import { newSpace, useActions } from "@/state/actions"
 import { isBlankNote } from "@/db/schema"
 import { useData } from "@/state/data"
 import { goWrite, newNote, openNote } from "@/state/notes"
-import { useUi, type View } from "@/state/ui"
+import { useUi } from "@/state/ui"
 import { ClipThumb, SpaceDot } from "./clip-visual"
 import { GROUPS } from "./views"
+import { navigate, useNote, useView, type View } from "@/state/route"
 
 interface Item {
   id: string
@@ -89,7 +90,7 @@ function close() {
 }
 
 const ui = useUi.getState
-const go = (view: View) => () => ui().setView(view)
+const go = (view: View) => () => navigate({ view })
 
 function RootCommands({ defer }: { defer: (run: () => void) => void }) {
   const [query, setQuery] = useState("")
@@ -97,8 +98,8 @@ function RootCommands({ defer }: { defer: (run: () => void) => void }) {
   const actions = useActions()
   const { setTheme } = useTheme()
   const listSelection = useUi((s) => s.selected)
-  const writing = useUi((s) => s.view.type === "write")
-  const noteId = useUi((s) => s.note)
+  const writing = useView().type === "write"
+  const noteId = useNote()
   // Write hides the list, so its selection is out of sight; commands act on the note being written instead.
   const note = writing && noteId ? byId.get(noteId) : undefined
   const selected = useMemo(
@@ -252,8 +253,7 @@ function RootCommands({ defer }: { defer: (run: () => void) => void }) {
     if (!clip) return
     // Notes are for writing in, so they open where that happens.
     if (clip.kind === "note") return openNote(id)
-    const state = useUi.getState()
-    if (!visible.some((c) => c.id === id)) state.setView(clip.spaceId ? { type: "space", id: clip.spaceId } : { type: "all" })
+    if (!visible.some((c) => c.id === id)) navigate({ view: clip.spaceId ? { type: "space", id: clip.spaceId } : { type: "all" } })
     useUi.getState().setSelection([id], id)
   }
 

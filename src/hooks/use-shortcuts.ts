@@ -4,6 +4,7 @@ import type { Actions } from "@/state/actions"
 import { useData } from "@/state/data"
 import { goWrite, newNote } from "@/state/notes"
 import { useUi } from "@/state/ui"
+import { navigate, useView } from "@/state/route"
 
 /** Menus and dialogs own their keyboard; global shortcuts must not fire underneath them. */
 function insideOverlay(e: KeyboardEvent): boolean {
@@ -17,8 +18,8 @@ function hasTextSelection(): boolean {
 export function useShortcuts(actions: Actions) {
   const { visible } = useData()
   const overlay = useUi((s) => s.overlay)
-  const inTrash = useUi((s) => s.view.type === "trash")
-  const writing = useUi((s) => s.view.type === "write")
+  const inTrash = useView().type === "trash"
+  const writing = useView().type === "write"
   const enabled = overlay === null
   const opts: Options = { enabled, preventDefault: true, ignoreEventWhen: insideOverlay }
   /** Keys that act on the list's selection. Write hides the list, so they'd act on clips nobody can see. */
@@ -126,7 +127,7 @@ export function useShortcuts(actions: Actions) {
 
   useHotkeys(["bracketleft", "mod+backslash"], () => ui().setSidebarOpen(!ui().sidebarOpen), opts)
 
-  useHotkeys("g>a", () => ui().setView({ type: "all" }), opts)
-  useHotkeys("g>p", () => ui().setView({ type: "pinned" }), opts)
-  useHotkeys("g>t", () => ui().setView({ type: "trash" }), opts)
+  useHotkeys("g>a", () => navigate({ view: { type: "all" } }), opts)
+  useHotkeys("g>p", () => navigate({ view: { type: "pinned" } }), opts)
+  useHotkeys("g>t", () => navigate({ view: { type: "trash" } }), opts)
 }

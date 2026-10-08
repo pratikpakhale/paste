@@ -1,27 +1,6 @@
 import { create } from "zustand"
 import { persist } from "zustand/middleware"
-import type { ClipKind } from "@/db/schema"
-
-export const KIND_GROUPS = {
-  notes: ["note"],
-  text: ["text", "markdown"],
-  code: ["code", "json"],
-  links: ["link"],
-  colors: ["color"],
-  images: ["image"],
-  media: ["video", "audio"],
-  files: ["pdf", "file"],
-} as const satisfies Record<string, readonly ClipKind[]>
-
-export type KindGroup = keyof typeof KIND_GROUPS
-
-export type View =
-  | { type: "write" }
-  | { type: "all" }
-  | { type: "pinned" }
-  | { type: "kind"; group: KindGroup }
-  | { type: "space"; id: string }
-  | { type: "trash" }
+import { onRouteChange, sameView } from "./route"
 
 export type SortMode = "manual" | "newest" | "oldest" | "copied"
 export type Layout = "list" | "grid"
@@ -33,13 +12,8 @@ export interface Queue {
   index: number
 }
 
+/** What's on screen and how it's arranged. Where the tab is (view and note) lives in the URL; see ./route. */
 interface UiState {
-  view: View
-  /**
-   * The note this tab is writing in. Lives in the URL rather than storage, which every tab shares,
-   * so each tab keeps its own note across reloads.
-   */
-  note: string | null
   sort: SortMode
   layout: Layout
   query: string
@@ -54,8 +28,6 @@ interface UiState {
   renamingSpace: string | null
   sidebarOpen: boolean
 
-  setView: (view: View) => void
-  setNote: (id: string | null) => void
   setSort: (sort: SortMode) => void
   setLayout: (layout: Layout) => void
   setQuery: (query: string) => void
@@ -72,9 +44,6 @@ interface UiState {
 export const useUi = create<UiState>()(
   persist(
     (set, get) => ({
-      // Paste opens on a blank page; the view isn't persisted.
-      view: { type: "write" },
-      note: new URL(location.href).searchParams.get("note"),
       sort: "manual",
       layout: "list",
       query: "",
@@ -86,14 +55,6 @@ export const useUi = create<UiState>()(
       renamingSpace: null,
       sidebarOpen: true,
 
-      setView: (view) => set({ view, query: "", selected: [], cursor: null, anchor: null, queue: null }),
-      setNote: (note) => {
-        const url = new URL(location.href)
-        if (note) url.searchParams.set("note", note)
-        else url.searchParams.delete("note")
-        history.replaceState(history.state, "", url)
-        set({ note })
-      },
       setSort: (sort) => set({ sort }),
       setLayout: (layout) => set({ layout }),
       setQuery: (query) => set({ query }),
@@ -131,9 +92,14 @@ export const useUi = create<UiState>()(
       partialize: ({ sort, layout, sidebarOpen }) => ({ sort, layout, sidebarOpen }),
       // Version 1 stored the view, which would now override opening on a blank page.
       migrate: (state) => {
-        const { view: _, ...rest } = state as Pick<UiState, "sort" | "layout" | "sidebarOpen"> & { view?: View }
+        const { view: _, ...rest } = state as Pick<UiState, "sort" | "layout" | "sidebarOpen"> & { view?: unknown }
         return rest
       },
     },
   ),
 )
+
+// A new view starts with nothing filtered or selected, however it was reached.
+onRouteChange((route, prev) => {
+  if (!sameView(route.view, prev.view)) useUi.setState({ query: "", selected: [], cursor: null, anchor: null, queue: null })
+})

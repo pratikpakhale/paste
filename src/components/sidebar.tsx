@@ -44,16 +44,17 @@ import { newSpace, useActions } from "@/state/actions"
 import { confirm } from "@/state/confirm"
 import { useData } from "@/state/data"
 import { goWrite, newNote, openNote } from "@/state/notes"
-import { useUi, type View } from "@/state/ui"
+import { useUi } from "@/state/ui"
 import { SpaceDot } from "./clip-visual"
 import type { DropTarget } from "./drag-layer"
-import { GROUPS, sameView } from "./views"
+import { GROUPS } from "./views"
+import { navigate, sameView, useNote, useView, type View } from "@/state/route"
 
-const go = (next: View) => useUi.getState().setView(next)
+const go = (view: View) => navigate({ view })
 
 export function Sidebar() {
   const { counts, spaces, live } = useData()
-  const view = useUi((s) => s.view)
+  const view = useView()
   const { active } = useDndContext()
   const draggingClip = active?.data.current?.type === "clip"
   const open = useUi((s) => s.sidebarOpen)
@@ -182,8 +183,8 @@ const RECENT_NOTES = 5
 
 /** The last few notes written in, one click from carrying on. */
 function RecentNotes({ live }: { live: Clip[] }) {
-  const writing = useUi((s) => s.view.type === "write")
-  const current = useUi((s) => s.note)
+  const writing = useView().type === "write"
+  const current = useNote()
   const notes = live
     .filter((c) => c.kind === "note")
     .toSorted((a, b) => b.updatedAt - a.updatedAt)
@@ -325,7 +326,7 @@ function SpaceItem({ space, count, active }: { space: Space; count: number; acti
           {...listeners}
           role="button"
           tabIndex={-1}
-          onClick={() => useUi.getState().setView({ type: "space", id: space.id })}
+          onClick={() => go({ type: "space", id: space.id })}
           onDoubleClick={() => useUi.getState().setRenamingSpace(space.id)}
           className={cn(
             "flex h-8 cursor-pointer items-center gap-2.5 rounded-md px-2.5 transition-colors duration-75 outline-none",

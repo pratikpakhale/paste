@@ -76,8 +76,17 @@ export const ClipItem = memo(function ClipItem(props: ClipItemProps) {
   )
 })
 
-/** Toggles the clip in the selection without the row's own click replacing it. */
-function SelectBox({ clip, selected, onCheck, className }: Pick<ClipItemProps, "clip" | "selected" | "onCheck"> & { className?: string }) {
+/**
+ * Toggles the clip in the selection without the row's own click replacing it. Shows on hover, and on
+ * every clip once several are selected.
+ */
+function SelectBox({
+  clip,
+  selected,
+  selecting,
+  onCheck,
+  className,
+}: Pick<ClipItemProps, "clip" | "selected" | "selecting" | "onCheck"> & { className?: string }) {
   return (
     <Checkbox
       checked={selected}
@@ -88,7 +97,11 @@ function SelectBox({ clip, selected, onCheck, className }: Pick<ClipItemProps, "
         onCheck(clip.id, e)
       }}
       onDoubleClick={(e) => e.stopPropagation()}
-      className={cn("cursor-pointer bg-background", className)}
+      className={cn(
+        "cursor-pointer bg-background transition-opacity",
+        !selecting && "opacity-0 group-hover:opacity-100 focus-visible:opacity-100",
+        className,
+      )}
     />
   )
 }
@@ -106,7 +119,7 @@ function Position({ value, active }: { value: number; active?: boolean }) {
   )
 }
 
-function RowBody({ clip, selected, isCursor, position, queuedNext, spaceName, timestamp, onCheck }: ClipItemProps) {
+function RowBody({ clip, selected, selecting, isCursor, position, queuedNext, spaceName, timestamp, onCheck }: ClipItemProps) {
   return (
     <div
       className={cn(
@@ -116,7 +129,7 @@ function RowBody({ clip, selected, isCursor, position, queuedNext, spaceName, ti
         isCursor && position !== null && "ring-1 ring-primary/30 ring-inset",
       )}
     >
-      <SelectBox clip={clip} selected={selected} onCheck={onCheck} />
+      <SelectBox clip={clip} selected={selected} selecting={selecting} onCheck={onCheck} />
       <ClipThumb clip={clip} />
       <span className="min-w-0 shrink truncate">{clipLabel(clip)}</span>
       <span className="min-w-0 flex-1 truncate text-detail text-subtle">{clipDetail(clip)}</span>
@@ -194,15 +207,7 @@ function CardBody({ clip, selected, selecting, isCursor, position, queuedNext, t
     >
       <div className="relative aspect-[4/3] overflow-hidden border-b bg-muted/40">
         <CardPreview clip={clip} />
-        <SelectBox
-          clip={clip}
-          selected={selected}
-          onCheck={onCheck}
-          className={cn(
-            "absolute top-2 left-2 shadow-xs transition-opacity",
-            !selecting && "opacity-0 group-hover:opacity-100 focus-visible:opacity-100",
-          )}
-        />
+        <SelectBox clip={clip} selected={selected} selecting={selecting} onCheck={onCheck} className="absolute top-2 left-2 shadow-xs" />
         <div className="absolute top-2 right-2 flex items-center gap-1">
           {clip.pinned && (
             <span className="flex size-5 items-center justify-center rounded-full bg-background/80 backdrop-blur">

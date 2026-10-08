@@ -1,6 +1,6 @@
 import { createContext, use } from "react"
 import type { Clip, Space } from "@/db/schema"
-import type { KindGroup } from "./ui"
+import type { KindGroup } from "./route"
 
 export interface Data {
   ready: boolean

@@ -1,4 +1,5 @@
 import { ThemeProvider } from "next-themes"
+import { NuqsAdapter } from "nuqs/adapters/react"
 import { StrictMode } from "react"
 import { Toaster } from "@/components/ui/sonner"
 import { TooltipProvider } from "@/components/ui/tooltip"
@@ -9,14 +10,16 @@ import { App } from "./app"
 export function Root() {
   return (
     <StrictMode>
-      <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
-        <TooltipProvider delayDuration={400}>
-          <DataProvider>
-            <App />
-          </DataProvider>
-          <Toaster position="bottom-right" />
-        </TooltipProvider>
-      </ThemeProvider>
+      <NuqsAdapter>
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+          <TooltipProvider delayDuration={400}>
+            <DataProvider>
+              <App />
+            </DataProvider>
+            <Toaster position="bottom-right" />
+          </TooltipProvider>
+        </ThemeProvider>
+      </NuqsAdapter>
     </StrictMode>
   )
 }

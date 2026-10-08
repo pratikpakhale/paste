@@ -10,6 +10,7 @@ import { useData } from "@/state/data"
 import { openNote } from "@/state/notes"
 import { useUi } from "@/state/ui"
 import { ClipItem } from "./clip-item"
+import { useView } from "@/state/route"
 
 function timestampFor(clip: Clip, sort: string): number {
   return sort === "copied" ? (clip.copiedAt ?? clip.createdAt) : sort === "trash" ? (clip.deletedAt ?? clip.createdAt) : clip.createdAt
@@ -18,7 +19,7 @@ function timestampFor(clip: Clip, sort: string): number {
 export function ClipList() {
   const { visible, canReorder, spaces, ready, byId } = useData()
   const layout = useUi((s) => s.layout)
-  const view = useUi((s) => s.view)
+  const view = useView()
   const sort = useUi((s) => s.sort)
   const query = useUi((s) => s.query)
   const selected = useUi((s) => s.selected)

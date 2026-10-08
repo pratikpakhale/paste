@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test"
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react"
-import { addClips, saveNoteSnapshot } from "@/db/actions"
+import { addClips, createSpace, saveNoteSnapshot } from "@/db/actions"
 import { db, docUpdates } from "@/db/schema"
+import { getRoute, navigate } from "@/state/route"
 import { useUi } from "@/state/ui"
 import { Root } from "./root"
 
@@ -12,7 +13,8 @@ const initialUi = useUi.getState()
 beforeEach(async () => {
   await Promise.all([db.clips.clear(), db.spaces.clear(), db.blobs.clear(), docUpdates().clear()])
   // Most tests drive the clip list; the app itself opens on a blank note.
-  useUi.setState({ ...initialUi, view: { type: "all" }, note: null }, true)
+  useUi.setState(initialUi, true)
+  navigate({ view: { type: "all" }, note: null }, { replace: true })
 })
 afterEach(cleanup)
 
@@ -172,6 +174,48 @@ describe("app", () => {
     await waitFor(() => expect(document.activeElement?.getAttribute("aria-label")).toBe("Title"))
   })
 
+  test("the view lives in the URL: reload keeps it, back returns from it", async () => {
+    const id = await createSpace("Moodboard")
+    await addClips([{ type: "text", text: "In the space" }], id)
+    await addClips([{ type: "text", text: "Loose" }], null)
+    render(<Root />)
+    const space = await screen.findByRole("button", { name: /Moodboard/ })
+    act(() => space.click())
+    expect(await screen.findByRole("heading", { name: "Moodboard" })).toBeTruthy()
+    expect(new URL(location.href).searchParams.get("view")).toBe(`space:${id}`)
+
+    cleanup()
+    render(<Root />)
+    expect(await screen.findByRole("heading", { name: "Moodboard" })).toBeTruthy()
+    expect(screen.queryByText("Loose")).toBeNull()
+
+    act(() => history.back())
+    await waitFor(() => expect(getRoute().view.type).toBe("all"))
+    expect(await screen.findByRole("heading", { name: "All clips" })).toBeTruthy()
+  })
+
+  test("checking clips selects several, and select all takes the whole view", async () => {
+    await addClips(
+      [
+        { type: "text", text: "One" },
+        { type: "text", text: "Two" },
+        { type: "text", text: "Three" },
+      ],
+      null,
+    )
+    render(<Root />)
+    await screen.findByText("One")
+    act(() => screen.getByRole("checkbox", { name: "Select One" }).click())
+    act(() => screen.getByRole("checkbox", { name: "Select Three" }).click())
+    expect(useUi.getState().selected).toHaveLength(2)
+    expect(await screen.findByText("2 of 3 selected")).toBeTruthy()
+
+    act(() => screen.getByRole("checkbox", { name: "Select all" }).click())
+    expect(useUi.getState().selected).toHaveLength(3)
+    act(() => screen.getByRole("checkbox", { name: "Clear selection" }).click())
+    expect(useUi.getState().selected).toHaveLength(0)
+  })
+
   test("[ toggles the sidebar", async () => {
     render(<Root />)
     await screen.findByText("Paste anything")
@@ -187,14 +231,14 @@ describe("app", () => {
     render(<Root />)
     await screen.findByText("Paste anything")
     press("n")
-    await waitFor(() => expect(useUi.getState().view.type).toBe("write"))
-    const id = useUi.getState().note!
+    await waitFor(() => expect(getRoute().view.type).toBe("write"))
+    const id = getRoute().note!
     expect(new URL(location.href).searchParams.get("note")).toBe(id)
     expect((await db.clips.get(id))?.kind).toBe("note")
     // The editor loads lazily, once the note's document is read.
     expect(await screen.findByLabelText("Note", {}, { timeout: 3000 })).toBeTruthy()
 
-    act(() => useUi.getState().setView({ type: "all" }))
+    act(() => navigate({ view: { type: "all" } }))
     await screen.findAllByText("Paste anything")
     expect(screen.queryByText("Empty")).toBeNull()
 

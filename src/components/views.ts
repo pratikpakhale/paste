@@ -1,6 +1,6 @@
 import type { LucideIcon } from "lucide-react"
 import type { Space } from "@/db/schema"
-import type { KindGroup, View } from "@/state/ui"
+import type { KindGroup, View } from "@/state/route"
 import { KIND_ICON } from "./kind-icons"
 
 export const GROUPS: { group: KindGroup; label: string; icon: LucideIcon }[] = [
@@ -29,11 +29,4 @@ export function viewTitle(view: View, spaces: Space[]): string {
     case "space":
       return spaces.find((s) => s.id === view.id)?.name ?? "Space"
   }
-}
-
-export function sameView(a: View, b: View): boolean {
-  if (a.type !== b.type) return false
-  if (a.type === "kind" && b.type === "kind") return a.group === b.group
-  if (a.type === "space" && b.type === "space") return a.id === b.id
-  return true
 }

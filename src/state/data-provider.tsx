@@ -4,7 +4,8 @@ import { type Clip, type ClipKind, db, isBlankNote } from "@/db/schema"
 import { compareManual } from "@/lib/order"
 import { useSearch } from "@/lib/search"
 import { type Counts, type Data, DataContext } from "./data"
-import { KIND_GROUPS, type KindGroup, type SortMode, useUi, type View } from "./ui"
+import { KIND_GROUPS, type KindGroup, navigate, useView, type View } from "./route"
+import { type SortMode, useUi } from "./ui"
 
 const GROUP_OF = Object.fromEntries(Object.entries(KIND_GROUPS).flatMap(([group, kinds]) => kinds.map((kind) => [kind, group]))) as Record<
   ClipKind,
@@ -68,7 +69,7 @@ function partition(clips: Clip[]) {
 export function DataProvider({ children }: { children: ReactNode }) {
   const clips = useLiveQuery(() => db.clips.toArray(), [])
   const spaceRows = useLiveQuery(() => db.spaces.orderBy("order").toArray(), [])
-  const view = useUi((s) => s.view)
+  const view = useView()
   const sort = useUi((s) => s.sort)
   const query = useUi((s) => s.query)
 
@@ -88,7 +89,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   // A view can disappear underneath us (space deleted in another tab); fall back gracefully.
   const missingSpace = spaceRows !== undefined && view.type === "space" && !spaces.some((s) => s.id === view.id)
   useEffect(() => {
-    if (missingSpace) useUi.getState().setView({ type: "all" })
+    if (missingSpace) navigate({ view: { type: "all" } }, { replace: true })
   }, [missingSpace])
 
   const value = useMemo<Data>(

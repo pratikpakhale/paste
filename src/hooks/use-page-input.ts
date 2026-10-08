@@ -5,6 +5,7 @@ import { readTransfer } from "@/lib/clipboard"
 import type { Actions } from "@/state/actions"
 import { useData } from "@/state/data"
 import { insertIntoNote } from "@/state/notes"
+import { getRoute } from "@/state/route"
 import { useUi } from "@/state/ui"
 
 function isEditable(target: EventTarget | null): boolean {
@@ -22,7 +23,7 @@ export function usePageInput(actions: Actions) {
   const { byId } = useData()
 
   const target = useCallback((): PageTarget => {
-    const { view, note } = useUi.getState()
+    const { view, note } = getRoute()
     if (view.type !== "write") return "clips"
     // A note too new to be in the data yet is about to be; it can't be in the trash.
     const clip = note ? byId.get(note) : undefined

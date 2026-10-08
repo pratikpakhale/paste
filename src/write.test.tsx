@@ -4,6 +4,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-libra
 import * as Y from "yjs"
 import { addClips, deleteForever, readNoteDoc, restoreClips, saveNoteSnapshot, trashClips } from "@/db/actions"
 import { type Clip, db, docUpdates, NOTE_FIELD, type TextClip } from "@/db/schema"
+import { getRoute, navigate } from "@/state/route"
 import { useUi } from "@/state/ui"
 import { Root } from "./root"
 
@@ -16,8 +17,8 @@ const initialUi = useUi.getState()
 
 beforeEach(async () => {
   await Promise.all([db.clips.clear(), db.spaces.clear(), db.blobs.clear(), docUpdates().clear()])
-  history.replaceState(null, "", "/")
-  useUi.setState({ ...initialUi, view: { type: "write" }, note: null }, true)
+  useUi.setState(initialUi, true)
+  navigate({ view: { type: "write" }, note: null }, { replace: true })
 })
 afterEach(cleanup)
 
@@ -31,7 +32,7 @@ async function noteEditor(): Promise<Editor> {
 
 /** The editor for a specific note, waiting out a switch from another one. */
 async function editorFor(id: string): Promise<Editor> {
-  await waitFor(() => expect(useUi.getState().note).toBe(id))
+  await waitFor(() => expect(getRoute().note).toBe(id))
   let editor: Editor | undefined
   await waitFor(async () => {
     editor = await noteEditor()
@@ -95,7 +96,7 @@ const header = () => document.querySelector("main header")!
 async function open(): Promise<{ id: string; editor: Editor }> {
   render(<Root />)
   const editor = await noteEditor()
-  const id = useUi.getState().note!
+  const id = getRoute().note!
   return { id, editor }
 }
 
@@ -106,7 +107,7 @@ describe("write", () => {
     expect((await note(id))?.kind).toBe("note")
     expect(header().textContent).toContain("New note")
     expect(screen.getByText(/Saved as you type/)).toBeTruthy()
-    act(() => useUi.getState().setView({ type: "all" }))
+    act(() => navigate({ view: { type: "all" } }))
     expect((await screen.findAllByText("Paste anything")).length).toBeGreaterThan(0)
   })
 
@@ -127,7 +128,7 @@ describe("write", () => {
     paste(editor.view.dom, { "text/plain": " and more" })
     await waitFor(() => expect(editor.getText()).toContain("and more"))
     expect(await otherClips(id)).toHaveLength(0)
-    expect(useUi.getState().view.type).toBe("write")
+    expect(getRoute().view.type).toBe("write")
   })
 
   test("a paste on the page around the editor goes into the note", async () => {
@@ -137,7 +138,7 @@ describe("write", () => {
     await waitFor(() => expect(editor.getText()).toContain("From the margin"))
     await waitFor(async () => expect((await note(id))?.text).toBe("From the margin"))
     expect(await otherClips(id)).toHaveLength(0)
-    expect(useUi.getState().view.type).toBe("write")
+    expect(getRoute().view.type).toBe("write")
   })
 
   test("a paste made before the note has loaded is not lost", async () => {
@@ -159,7 +160,7 @@ describe("write", () => {
     // A note holding only an image isn't blank.
     await waitFor(async () => expect((await note(id))?.html).toContain(`data-blob="${blob}"`))
     expect(header().textContent).not.toContain("New note")
-    act(() => useUi.getState().setView({ type: "all" }))
+    act(() => navigate({ view: { type: "all" } }))
     expect((await screen.findAllByText("Image note")).length).toBeGreaterThan(0)
     expect((await screen.findAllByText("0 words · 1 image")).length).toBeGreaterThan(0)
   }, 10_000)
@@ -209,13 +210,13 @@ describe("write", () => {
 
     act(() => editor.view.dom.blur())
     press("n")
-    await waitFor(() => expect(useUi.getState().note).not.toBe(first))
-    const second = useUi.getState().note!
+    await waitFor(() => expect(getRoute().note).not.toBe(first))
+    const second = getRoute().note!
     typeInto(await editorFor(second), "Second note")
     await waitFor(async () => expect((await note(second))?.text).toBe("Second note"))
 
     // Back and forth, faster than documents load and release.
-    for (const id of [first, second, first, second, first]) act(() => useUi.getState().setNote(id))
+    for (const id of [first, second, first, second, first]) act(() => navigate({ note: id }))
     const back = await editorFor(first)
     await waitFor(() => expect(back.getText()).toBe("First note"))
     typeInto(back, " again")
@@ -234,7 +235,7 @@ describe("write", () => {
     typeInto(editor, "Draft")
     await waitFor(async () => expect((await note(id))?.text).toBe("Draft"))
 
-    act(() => useUi.getState().setView({ type: "all" }))
+    act(() => navigate({ view: { type: "all" } }))
     act(() => useUi.getState().setSelection([id], id))
     const inPane = await noteEditor()
     await waitFor(() => expect(inPane.getText()).toBe("Draft"))
@@ -243,8 +244,8 @@ describe("write", () => {
 
     const row = document.querySelector(`[data-clip-id="${id}"]`)!
     act(() => void fireEvent.doubleClick(row))
-    expect(useUi.getState().view.type).toBe("write")
-    expect(useUi.getState().note).toBe(id)
+    expect(getRoute().view.type).toBe("write")
+    expect(getRoute().note).toBe(id)
   })
 
   test("list shortcuts don't touch clips hidden behind Write", async () => {
@@ -258,7 +259,7 @@ describe("write", () => {
     expect(clip?.deletedAt).toBeNull()
     expect(clip?.pinned).toBe(false)
     expect(useUi.getState().overlay).toBeNull()
-    expect(useUi.getState().view.type).toBe("write")
+    expect(getRoute().view.type).toBe("write")
   })
 
   test("the palette's commands act on the note, not the hidden list", async () => {
@@ -274,7 +275,7 @@ describe("write", () => {
     act(() => void fireEvent.click(screen.getByText("Move to trash")))
     await waitFor(async () => expect((await note(id))?.deletedAt).not.toBeNull())
     expect((await db.clips.get(clipId!))?.deletedAt).toBeNull()
-    await waitFor(() => expect(useUi.getState().note).not.toBe(id))
+    await waitFor(() => expect(getRoute().note).not.toBe(id))
   })
 
   test("trashing the note moves on to a new one", async () => {
@@ -282,7 +283,7 @@ describe("write", () => {
     typeInto(editor, "Throwaway")
     await waitFor(async () => expect((await note(id))?.text).toBe("Throwaway"))
     act(() => void fireEvent.click(screen.getByLabelText("Move to trash")))
-    await waitFor(() => expect(useUi.getState().note).not.toBe(id))
+    await waitFor(() => expect(getRoute().note).not.toBe(id))
     expect((await note(id))?.deletedAt).not.toBeNull()
     await noteEditor()
     expect(header().textContent).toContain("New note")
@@ -299,7 +300,7 @@ describe("write", () => {
     paste(document.body, { "text/plain": "Somewhere else" })
     expect(await screen.findByText("This note is in the trash")).toBeTruthy()
     expect(await otherClips(id)).toHaveLength(0)
-    expect(useUi.getState().view.type).toBe("write")
+    expect(getRoute().view.type).toBe("write")
 
     await restoreClips([id])
     await waitFor(() => expect(editor.isEditable).toBe(true))
@@ -312,7 +313,7 @@ describe("write", () => {
     await deleteForever([id])
     expect(await screen.findByText("This note was deleted.")).toBeTruthy()
     act(() => void fireEvent.click(screen.getByRole("button", { name: /New note N$/ })))
-    await waitFor(() => expect(useUi.getState().note).not.toBe(id))
+    await waitFor(() => expect(getRoute().note).not.toBe(id))
     await noteEditor()
   })
 
@@ -320,7 +321,7 @@ describe("write", () => {
     const { id: blank, editor } = await open()
     act(() => editor.view.dom.blur())
     press("n")
-    await waitFor(() => expect(useUi.getState().note).not.toBe(blank))
+    await waitFor(() => expect(getRoute().note).not.toBe(blank))
     await waitFor(async () => expect(await note(blank)).toBeUndefined())
   })
 
@@ -329,7 +330,8 @@ describe("write", () => {
     typeInto(editor, "Still here")
     await waitFor(async () => expect((await note(id))?.text).toBe("Still here"))
     cleanup()
-    useUi.setState({ ...initialUi, view: { type: "write" }, note: id }, true)
+    useUi.setState(initialUi, true)
+    navigate({ view: { type: "write" }, note: id }, { replace: true })
     render(<Root />)
     const again = await editorFor(id)
     await waitFor(() => expect(again.getText()).toBe("Still here"))
@@ -341,11 +343,11 @@ describe("write", () => {
     await waitFor(async () => expect((await note(first))?.text).toBe("Ongoing"))
     act(() => editor.view.dom.blur())
     press("n")
-    await waitFor(() => expect(useUi.getState().note).not.toBe(first))
-    const blank = await editorFor(useUi.getState().note!)
+    await waitFor(() => expect(getRoute().note).not.toBe(first))
+    const blank = await editorFor(getRoute().note!)
     expect(await screen.findByText(/Continue “Ongoing”/)).toBeTruthy()
     act(() => void fireEvent.keyDown(blank.view.dom, { key: "ArrowUp" }))
-    await waitFor(() => expect(useUi.getState().note).toBe(first))
+    await waitFor(() => expect(getRoute().note).toBe(first))
   })
 
   test("a file dropped on the page goes into the note", async () => {
@@ -373,7 +375,7 @@ describe("write", () => {
 
   test("pastes outside Write still become clips", async () => {
     await open()
-    act(() => useUi.getState().setView({ type: "all" }))
+    act(() => navigate({ view: { type: "all" } }))
     paste(document.body, { "text/plain": "A clip" })
     await waitFor(async () => expect((await db.clips.toArray()).some((c) => c.kind === "text")).toBe(true))
   })

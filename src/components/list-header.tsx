@@ -21,6 +21,7 @@ import { type Layout, type SortMode, useUi } from "@/state/ui"
 import { SpaceDot } from "./clip-visual"
 import { Segmented } from "./segmented"
 import { viewTitle } from "./views"
+import { useView } from "@/state/route"
 
 const SORTS: { value: SortMode; label: string }[] = [
   { value: "manual", label: "Manual" },
@@ -32,7 +33,7 @@ const SORTS: { value: SortMode; label: string }[] = [
 export function ListHeader() {
   const { spaces, visible, counts } = useData()
   const actions = useActions()
-  const view = useUi((s) => s.view)
+  const view = useView()
   const sort = useUi((s) => s.sort)
   const layout = useUi((s) => s.layout)
   const query = useUi((s) => s.query)
@@ -51,7 +52,7 @@ export function ListHeader() {
   return (
     <header
       className={cn(
-        "flex h-12 shrink-0 items-center gap-3 border-b pr-3 transition-[padding] duration-200 ease-out motion-reduce:transition-none",
+        "group/header flex h-12 shrink-0 items-center gap-3 border-b pr-3 transition-[padding] duration-200 ease-out motion-reduce:transition-none",
         sidebarOpen ? "pl-5" : "pl-13",
       )}
     >
@@ -71,7 +72,10 @@ export function ListHeader() {
                       visible[0]?.id ?? null,
                     )
                 }}
-                className="mr-1 cursor-pointer"
+                className={cn(
+                  "mr-1 cursor-pointer transition-opacity",
+                  !selecting && "opacity-0 group-hover/header:opacity-100 focus-visible:opacity-100",
+                )}
               />
             </TooltipTrigger>
             <TooltipContent>

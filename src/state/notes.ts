@@ -2,7 +2,7 @@ import { useEffect, useState } from "react"
 import { create } from "zustand"
 import { type ClipInput, createNote, discardIfEmpty, locks, noteLockName } from "@/db/actions"
 import { db } from "@/db/schema"
-import { useUi } from "./ui"
+import { getRoute, navigate, onRouteChange } from "./route"
 
 /**
  * This tab's claim on its open note: a shared Web Lock, so other tabs can see the note is in use
@@ -43,27 +43,26 @@ function hold(id: string | null): Promise<void> {
   return switching
 }
 
-void hold(useUi.getState().note)
-useUi.subscribe((state, prev) => {
-  if (state.note === prev.note) return
+void hold(getRoute().note)
+onRouteChange((route, prev) => {
+  if (route.view.type === "write") void replaceMissingNote()
+  if (route.note === prev.note) return
   const left = prev.note
   // A note left blank was never really a clip; drop it once this tab lets go of it.
   void (async () => {
-    await hold(state.note)
+    await hold(route.note)
     if (left) await discardIfEmpty(left)
   })()
 })
 
 /** Shows a note in Write. */
-export function openNote(id: string) {
-  const ui = useUi.getState()
-  ui.setNote(id)
-  ui.setView({ type: "write" })
+export function openNote(id: string, options?: { replace?: boolean }) {
+  navigate({ view: { type: "write" }, note: id }, options)
 }
 
 /** Where a new note goes: the space being looked at, or the space of the note being written in. */
 async function currentSpace(): Promise<string | null> {
-  const { view, note } = useUi.getState()
+  const { view, note } = getRoute()
   if (view.type === "space") return view.id
   if (view.type === "write" && note) return (await db.clips.get(note))?.spaceId ?? null
   return null
@@ -72,37 +71,45 @@ async function currentSpace(): Promise<string | null> {
 let creating: Promise<string> | null = null
 
 /** Opens a fresh, blank note. Calls made while one is being created share it. */
-export async function newNote(spaceId?: string | null): Promise<string> {
+export async function newNote(spaceId?: string | null, options?: { replace?: boolean }): Promise<string> {
   creating ??= (async () => createNote(spaceId === undefined ? await currentSpace() : spaceId))().finally(() => (creating = null))
   const id = await creating
-  openNote(id)
+  openNote(id, options)
   return id
 }
 
 /** Back to this tab's note, or a new one if it's gone. */
 export async function goWrite() {
-  const id = useUi.getState().note
+  const id = getRoute().note
   const clip = id ? await db.clips.get(id) : undefined
   if (clip && clip.deletedAt === null) openNote(clip.id)
   else await newNote()
 }
 
 /**
- * Puts the tab on a note at launch: the one in its URL when it still exists (a reload), otherwise a
- * blank one. The installed app's "New note" shortcut launches with `?new`.
+ * Write needs a note to show. One that's gone (left blank and dropped, deleted, trashed) is swapped
+ * for a blank one in place, whether the tab landed there by reloading or by going back.
+ */
+async function replaceMissingNote() {
+  const { view, note } = getRoute()
+  if (view.type !== "write") return
+  const clip = note ? await db.clips.get(note) : undefined
+  if (!clip || clip.deletedAt !== null || clip.kind !== "note") await newNote(null, { replace: true })
+}
+
+/**
+ * Puts the tab where its URL says: a reload keeps the view and the note. The installed app's
+ * "New note" shortcut launches with `?new`.
  */
 export async function startSession() {
   const url = new URL(location.href)
   if (url.searchParams.has("new")) {
     url.searchParams.delete("new")
     history.replaceState(history.state, "", url)
-    await newNote(null)
+    await newNote(null, { replace: true })
     return
   }
-  const { view, note } = useUi.getState()
-  if (view.type !== "write") return
-  const clip = note ? await db.clips.get(note) : undefined
-  if (!clip || clip.deletedAt !== null || clip.kind !== "note") await newNote(null)
+  await replaceMissingNote()
 }
 
 const PRESENCE_POLL_MS = 2000
@@ -155,7 +162,7 @@ export function acceptInserts(id: string, insert: Insert): () => void {
 /** Puts pasted or dropped content into this tab's note. A note whose editor is still loading gets it once it's up. */
 export function insertIntoNote(inputs: ClipInput[]) {
   if (!inputs.length) return
-  const id = useUi.getState().note
+  const id = getRoute().note
   if (id && inserter?.id === id) inserter.insert(inputs)
   else pending = { id, inputs, at: Date.now() }
 }
