@@ -1,5 +1,8 @@
 import {
   ArrowDownUp,
+  Calculator,
+  ClipboardPlus,
+  Coins,
   Copy,
   Download,
   FolderInput,
@@ -23,6 +26,7 @@ import {
 } from "lucide-react"
 import { useTheme } from "next-themes"
 import { useMemo, useState } from "react"
+import { toast } from "sonner"
 import {
   Command,
   CommandDialog,
@@ -33,7 +37,8 @@ import {
   CommandList,
   CommandShortcut,
 } from "@/components/ui/command"
-import { createSpace } from "@/db/actions"
+import { addClips, createSpace } from "@/db/actions"
+import { useCalcAnswer } from "@/hooks/use-calc"
 import { useDeferredFocus } from "@/hooks/use-deferred-focus"
 import { clipLabel, kindLabel } from "@/lib/format"
 import { useSearch } from "@/lib/search"
@@ -42,6 +47,7 @@ import { newSpace, useActions } from "@/state/actions"
 import { isBlankNote } from "@/db/schema"
 import { useData } from "@/state/data"
 import { goWrite, newNote, openNote } from "@/state/notes"
+import { useSettings } from "@/state/settings"
 import { useUi } from "@/state/ui"
 import { ClipThumb, SpaceDot } from "./clip-visual"
 import { GROUPS } from "./views"
@@ -107,6 +113,10 @@ function RootCommands({ defer }: { defer: (run: () => void) => void }) {
     [writing, listSelection, note],
   )
   const hits = useSearch(live, query)
+  const answer = useCalcAnswer(query)
+  const currencyRates = useSettings((s) => s.currencyRates)
+  const numberFormat = useSettings((s) => s.numberFormat)
+  const autoAnswers = useSettings((s) => s.autoAnswers)
 
   const clipResults = useMemo(() => {
     if (!hits) return []
@@ -222,6 +232,41 @@ function RootCommands({ defer }: { defer: (run: () => void) => void }) {
         run: () => ui().setOverlay("shortcuts"),
       },
       ...(counts.trash ? [{ id: "empty-trash", label: "Empty trash", icon: Trash2, run: () => void actions.clearTrash() }] : []),
+      {
+        id: "auto-answers",
+        label: autoAnswers ? "Only answer lines that end in =" : "Answer every calculation in notes",
+        icon: Calculator,
+        keywords: "calculator math answers automatic equals notes",
+        run: () => {
+          useSettings.getState().setAutoAnswers(!autoAnswers)
+          toast.success(autoAnswers ? "Only lines ending in = get an answer now" : "Every calculation in a note gets its answer")
+        },
+      },
+      {
+        id: "currency-rates",
+        label: currencyRates ? "Stop fetching exchange rates" : "Fetch exchange rates for currency conversion",
+        icon: Coins,
+        keywords: "currency money ecb network offline convert calculator",
+        run: () => {
+          useSettings.getState().setCurrencyRates(!currencyRates)
+          toast.success(currencyRates ? "Exchange rates off. Currencies won't convert" : "Exchange rates on, from the ECB, daily")
+        },
+      },
+      ...(
+        [
+          ["indian", "Indian (1,00,000)"],
+          ["international", "International (100,000)"],
+          ["auto", "Match the browser's language"],
+        ] as const
+      )
+        .filter(([format]) => format !== numberFormat)
+        .map(([format, label]) => ({
+          id: `number-format-${format}`,
+          label: `Group numbers: ${label}`,
+          icon: Calculator,
+          keywords: "number format digits lakh crore thousands separator calculator",
+          run: () => useSettings.getState().setNumberFormat(format),
+        })),
     ]
 
     const navigation: Item[] = [
@@ -243,7 +288,7 @@ function RootCommands({ defer }: { defer: (run: () => void) => void }) {
       { heading: "Go to", items: navigation },
       { heading: "Commands", items: general },
     ]
-  }, [actions, counts, selected, setTheme, spaces, visible, writing])
+  }, [actions, counts, selected, setTheme, spaces, visible, writing, currencyRates, numberFormat, autoAnswers])
 
   const words = query.toLowerCase().split(/\s+/).filter(Boolean)
   const filtered = words.length ? groups.map(({ heading, items }) => ({ heading, items: items.filter((i) => matches(i, words)) })) : groups
@@ -262,6 +307,7 @@ function RootCommands({ defer }: { defer: (run: () => void) => void }) {
       <CommandInput value={query} onValueChange={setQuery} placeholder="Search clips or type a command…" />
       <CommandList className="max-h-[min(420px,60vh)]">
         <CommandEmpty>Nothing found</CommandEmpty>
+        {answer && <CalculatorResults query={query} answer={answer} />}
         {clipResults.length > 0 && (
           <CommandGroup heading="Clips">
             {clipResults.map((clip) => (
@@ -353,5 +399,60 @@ function MoveCommands() {
         </CommandGroup>
       </CommandList>
     </>
+  )
+}
+
+function copy(text: string) {
+  void navigator.clipboard.writeText(text).then(
+    () => toast.success(`Copied ${text}`),
+    () => toast.error("Couldn't copy"),
+  )
+}
+
+function CalculatorResults({ query, answer }: { query: string; answer: NonNullable<ReturnType<typeof useCalcAnswer>> }) {
+  const view = useView()
+  const shown = answer.display.replace(/^≈\s*/, "")
+  return (
+    <CommandGroup heading="Calculator">
+      <CommandItem
+        value="calc-copy"
+        onSelect={() => {
+          close()
+          copy(shown)
+        }}
+        title={answer.interpretation}
+      >
+        <Calculator />
+        <span className="truncate">
+          <span className="text-subtle">=</span> <span className="font-medium tabular-nums">{answer.display}</span>
+        </span>
+        <CommandShortcut>Copy ↵</CommandShortcut>
+      </CommandItem>
+      {answer.approximate && (
+        <CommandItem
+          value="calc-copy-full"
+          onSelect={() => {
+            close()
+            copy(answer.full)
+          }}
+        >
+          <Copy />
+          <span className="truncate">Copy every digit</span>
+        </CommandItem>
+      )}
+      <CommandItem
+        value="calc-save"
+        onSelect={() => {
+          close()
+          void addClips([{ type: "text", text: shown }], view.type === "space" ? view.id : null).then(() =>
+            toast.success(`Saved ${shown} as a clip`),
+          )
+        }}
+      >
+        <ClipboardPlus />
+        <span className="truncate">Save answer as a clip</span>
+        <CommandShortcut className="max-w-40 truncate">{query.trim()}</CommandShortcut>
+      </CommandItem>
+    </CommandGroup>
   )
 }

@@ -1,5 +1,5 @@
 import { ArrowDownUp, LayoutGrid, List, Plus, Search, Trash2, X } from "lucide-react"
-import { useEffect, useRef } from "react"
+import { useEffect, useMemo, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
@@ -12,6 +12,8 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Kbd } from "@/components/ui/kbd"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+import { isFileClip } from "@/db/schema"
+import { useAmountsSummary } from "@/hooks/use-calc"
 import { onSearchRequest } from "@/lib/ui-events"
 import { cn } from "@/lib/utils"
 import { useActions } from "@/state/actions"
@@ -47,6 +49,13 @@ export function ListHeader() {
   const selectedSet = new Set(selected)
   const allSelected = visible.length > 0 && visible.every((c) => selectedSet.has(c.id))
   const selecting = selected.length > 1
+  const selectedTexts = useMemo(() => {
+    if (!selecting) return []
+    const chosen = new Set(selected)
+    return visible.flatMap((c) => (chosen.has(c.id) && !isFileClip(c) && c.kind !== "note" ? [c.text] : []))
+  }, [selecting, selected, visible])
+  // Only when every selected clip is an amount: a sum of some of them would mislead.
+  const summary = useAmountsSummary(selectedTexts.length === selected.length ? selectedTexts : [])
 
   // With the sidebar hidden, the fixed SidebarToggle sits over this header's left edge, so the title makes room.
   return (
@@ -95,6 +104,11 @@ export function ListHeader() {
         <h1 className="truncate font-medium">{viewTitle(view, spaces)}</h1>
         <span className={cn("whitespace-nowrap tabular-nums", selecting ? "text-primary" : "text-subtle")}>
           {selecting ? `${selected.length} of ${visible.length} selected` : visible.length}
+          {summary && (
+            <span className="ml-2 text-muted-foreground" title={`Average ${summary.average ?? "–"}`}>
+              Σ {summary.sum}
+            </span>
+          )}
         </span>
       </div>
 

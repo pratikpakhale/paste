@@ -1,10 +1,17 @@
 import { type Extensions, generateHTML, generateText, type JSONContent, mergeAttributes, Node } from "@tiptap/core"
+import { CodeBlock } from "@tiptap/extension-code-block"
+import { isChangeOrigin } from "@tiptap/extension-collaboration"
+import { Details, DetailsContent, DetailsSummary } from "@tiptap/extension-details"
+import { Highlight } from "@tiptap/extension-highlight"
 import { Image } from "@tiptap/extension-image"
 import { TaskItem, TaskList } from "@tiptap/extension-list"
+import { TableKit } from "@tiptap/extension-table"
+import { UniqueID } from "@tiptap/extension-unique-id"
 import { StarterKit } from "@tiptap/starter-kit"
 import { yXmlFragmentToProsemirrorJSON } from "@tiptap/y-tiptap"
 import type * as Y from "yjs"
 import { NOTE_FIELD, NOTE_MEDIA_NODES } from "@/db/schema"
+import { CalcBlock, CalcLine, CalcRef } from "./note-calc"
 
 /**
  * An image in a note. Pasted and dropped images live in the blob store (`blob`), so the document stays
@@ -56,16 +63,27 @@ export const Attachment = Node.create({
   },
 })
 
-/** A note's text structure. With the media nodes it makes up the schema; the editor draws those with its own views. */
+/**
+ * A note's text structure. With the nodes the editor draws with its own views (media, code, calc blocks, references)
+ * it makes up the schema.
+ */
 export const NOTE_TEXT_EXTENSIONS: Extensions = [
   // Collaboration brings its own history, scoped to this tab's edits.
-  StarterKit.configure({ undoRedo: false, link: { openOnClick: false, autolink: true } }),
+  StarterKit.configure({ undoRedo: false, codeBlock: false, link: { openOnClick: false, autolink: true } }),
   TaskList,
   TaskItem.configure({ nested: true }),
+  Highlight,
+  TableKit.configure({ table: { resizable: false } }),
+  Details.configure({ persist: true }),
+  DetailsSummary,
+  DetailsContent,
+  CalcLine,
+  // Calc lines are referred to by id. Edits arriving from other tabs already carry theirs.
+  UniqueID.configure({ types: ["calcBlock", "calcLine"], filterTransaction: (tr) => !isChangeOrigin(tr) }),
 ]
 
 /** Everything that shapes a note's document. The editor adds behaviour on top; the schema must match. */
-export const NOTE_EXTENSIONS: Extensions = [...NOTE_TEXT_EXTENSIONS, NoteImage, Attachment]
+export const NOTE_EXTENSIONS: Extensions = [...NOTE_TEXT_EXTENSIONS, NoteImage, Attachment, CodeBlock, CalcBlock, CalcRef]
 
 /** One line per block, so a note's first line is its title in lists, like every other text clip. */
 export const NOTE_TEXT_OPTIONS = { blockSeparator: "\n" }

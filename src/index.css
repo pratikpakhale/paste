@@ -268,3 +268,212 @@
   color: var(--subtle);
   text-decoration: line-through;
 }
+
+/* Any empty line the caret is on hints at the / menu; a blank note says more (above). */
+.note-content :is(p, [data-calc-line]).is-empty:not(.is-editor-empty)::before {
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  color: var(--faint);
+  pointer-events: none;
+}
+
+/* Calculations: lines on the left, answers in a column on the right, never part of the text. */
+.note-content .calc-block {
+  --calc-column: clamp(6rem, 34%, 15rem);
+  margin: 1.25em 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: color-mix(in oklch, var(--muted) 45%, transparent);
+}
+.note-content .calc-toolbar {
+  display: flex;
+  align-items: center;
+  height: 2rem;
+  padding: 0 0.375rem 0 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+.note-content .calc-lines {
+  padding: 0.5rem 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+.note-content [data-calc-line] {
+  position: relative;
+  min-height: 1.65em;
+  padding-right: calc(var(--calc-column) + 1rem);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.note-content .calc-answer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  max-width: var(--calc-column);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--primary);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  cursor: copy;
+  user-select: none;
+}
+.note-content .calc-answer:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+/* A paragraph's answer follows its `=`, faint until Tab writes it in. */
+.note-content .calc-ghost {
+  margin-left: 0.35em;
+  color: var(--subtle);
+  font-variant-numeric: tabular-nums;
+  cursor: copy;
+  user-select: none;
+}
+.note-content .calc-ghost:hover {
+  color: var(--primary);
+}
+.note-content .calc-error {
+  color: var(--destructive);
+  font-weight: 400;
+  font-size: 0.8125rem;
+  cursor: default;
+}
+.note-content .calc-error:hover {
+  text-decoration: none;
+}
+.note-content .calc-error-range {
+  text-decoration: underline dotted var(--destructive);
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 3px;
+}
+.note-content .calc-ref {
+  display: inline-block;
+  padding: 0 0.35em;
+  border-radius: var(--radius-sm);
+  background: var(--selected);
+  color: var(--primary);
+  font-weight: 500;
+  line-height: 1.4;
+  cursor: default;
+}
+.note-content .calc-ref-broken {
+  background: color-mix(in oklch, var(--destructive) 12%, transparent);
+  color: var(--destructive);
+}
+.note-content .calc-ref-selected {
+  outline: 2px solid var(--ring);
+}
+
+/* Code blocks: the highlighter colours tokens (index.css .shiki); the picker sits in the corner. */
+.note-content .code-block pre {
+  margin: 1em 0;
+}
+
+/* Tables */
+.note-content .tableWrapper {
+  margin: 1.25em 0;
+  overflow-x: auto;
+}
+.note-content table {
+  margin: 0;
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+.note-content :is(td, th) {
+  position: relative;
+  min-width: 4rem;
+  padding: 0.4em 0.6em;
+  border: 1px solid var(--border);
+  vertical-align: top;
+}
+.note-content th {
+  background: var(--muted);
+  font-weight: 600;
+  text-align: left;
+}
+.note-content :is(td, th) > p {
+  margin: 0;
+}
+.note-content .selectedCell::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--selected);
+  pointer-events: none;
+}
+
+/* Toggles */
+.note-content [data-type="details"] {
+  display: flex;
+  gap: 0.25rem;
+  margin: 0.75em 0;
+}
+.note-content [data-type="details"] > button {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.65em;
+  color: var(--subtle);
+  cursor: pointer;
+}
+.note-content [data-type="details"] > button::before {
+  content: "▸";
+  transition: transform 150ms ease-out;
+}
+.note-content [data-type="details"].is-open > button::before {
+  transform: rotate(90deg);
+}
+.note-content [data-type="details"] > div {
+  flex: 1;
+  min-width: 0;
+}
+.note-content [data-type="details"] summary {
+  font-weight: 500;
+  list-style: none;
+}
+.note-content [data-type="details"] summary::-webkit-details-marker {
+  display: none;
+}
+.note-content [data-type="details"] [data-type="detailsContent"] > :first-child {
+  margin-top: 0.25em;
+}
+.note-content [data-type="details"]:not(.is-open) [data-type="detailsContent"] {
+  display: none;
+}
+
+.note-content mark {
+  border-radius: 0.2em;
+  padding: 0 0.1em;
+  background: oklch(0.9 0.12 95 / 70%);
+  color: inherit;
+}
+.dark .note-content mark {
+  background: oklch(0.55 0.11 95 / 45%);
+}
+
+/* The block drag handle, in the margin left of the block under the pointer. */
+.note-drag-handle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.5rem;
+  border-radius: var(--radius-sm);
+  color: var(--faint);
+  cursor: grab;
+  transition:
+    color 120ms,
+    background-color 120ms;
+}
+.note-drag-handle:hover {
+  background: var(--accent);
+  color: var(--muted-foreground);
+}
+.note-drag-handle svg {
+  width: 1rem;
+  height: 1rem;
+}

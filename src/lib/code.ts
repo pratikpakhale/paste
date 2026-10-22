@@ -8,16 +8,35 @@ const THEMES = { light: "github-light-default", dark: "github-dark-default" } as
 export const MAX_HIGHLIGHT_CHARS = 150_000
 
 let highlighter: Promise<Highlighter> | undefined
+let ready: Highlighter | undefined
 
 function getHighlighter(): Promise<Highlighter> {
-  return (highlighter ??= import("shiki").then(({ createHighlighter, createJavaScriptRegexEngine }) =>
-    createHighlighter({
+  return (highlighter ??= import("shiki").then(async ({ createHighlighter, createJavaScriptRegexEngine }) => {
+    ready = await createHighlighter({
       themes: [THEMES.light, THEMES.dark],
       langs: [],
       engine: createJavaScriptRegexEngine(),
-    }),
-  ))
+    })
+    return ready
+  }))
 }
+
+/** The highlighter once it has loaded, for code that must highlight synchronously (the note editor). */
+export function loadedHighlighter(): Highlighter | undefined {
+  if (!ready) void getHighlighter()
+  return ready
+}
+
+/** Loads a language into the highlighter; resolves false if Shiki doesn't know it. */
+export async function loadHighlighterLanguage(language: string): Promise<boolean> {
+  const [hl, lang] = await Promise.all([getHighlighter(), resolveLanguage(language)])
+  if (lang === "text") return false
+  if (!hl.getLoadedLanguages().includes(lang)) await hl.loadLanguage(lang)
+  return true
+}
+
+/** Highlighting options for both themes at once, switched by CSS (see index.css). */
+export const DUAL_THEMES = { themes: THEMES, defaultColor: false } as const
 
 export interface LanguageOption {
   id: string
@@ -42,7 +61,7 @@ async function resolveLanguage(language: string | undefined): Promise<BundledLan
 export async function highlight(code: string, language: string | undefined): Promise<string> {
   const [hl, lang] = await Promise.all([getHighlighter(), resolveLanguage(language)])
   if (lang !== "text" && !hl.getLoadedLanguages().includes(lang)) await hl.loadLanguage(lang)
-  return hl.codeToHtml(code, { lang, themes: THEMES, defaultColor: false })
+  return hl.codeToHtml(code, { lang, ...DUAL_THEMES })
 }
 
 /** highlight.js and Shiki mostly share ids; these are the ones that don't line up. */

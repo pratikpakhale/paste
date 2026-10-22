@@ -4,8 +4,9 @@ import { Placeholder } from "@tiptap/extensions"
 import { Markdown } from "@tiptap/markdown"
 import type { Node as PMNode } from "@tiptap/pm/model"
 import type { EditorView } from "@tiptap/pm/view"
+import { DragHandle } from "@tiptap/extension-drag-handle-react"
 import { EditorContent, ReactNodeViewRenderer, useEditor, useEditorState } from "@tiptap/react"
-import { RotateCcw } from "lucide-react"
+import { GripVertical, RotateCcw } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import { ErrorBoundary, type FallbackProps } from "react-error-boundary"
 import { toast } from "sonner"
@@ -21,16 +22,26 @@ import { classifyText } from "@/lib/detect"
 import { clipLabel, formatAgo } from "@/lib/format"
 import { imageSize } from "@/lib/media"
 import { Attachment, NOTE_TEXT_EXTENSIONS, NOTE_TEXT_OPTIONS, NoteImage } from "@/lib/note-content"
+import { CalcBlock, CalcRef } from "@/lib/note-calc"
 import { adoptPastedMedia, needsAdoption } from "@/lib/note-media"
 import { type EditPoint, onEditRequest } from "@/lib/ui-events"
 import { cn } from "@/lib/utils"
 import { acceptInserts, setSaving } from "@/state/notes"
-import { AttachmentView, ImageView } from "./note-nodes"
+import { NoteBubbleMenu, NoteTableMenu } from "./note-bubble"
+import { CalcEditing, refPickerKey } from "./note-calc"
+import { CalcBlockView, CalcRefView } from "./note-calc-views"
+import { NoteCodeBlock } from "./note-code"
+import { AttachmentView, CodeBlockView, ImageView } from "./note-nodes"
+import { NoteOutline } from "./note-outline"
+import { SlashMenu, slashKey } from "./note-slash"
 
-/** The note's media nodes, drawn as React views in the editor. Headless rendering uses the plain schema. */
+/** The note's media, code and calc nodes, drawn as React views in the editor. Headless rendering uses the plain schema. */
 const NOTE_NODE_VIEWS = [
   NoteImage.extend({ addNodeView: () => ReactNodeViewRenderer(ImageView) }),
   Attachment.extend({ addNodeView: () => ReactNodeViewRenderer(AttachmentView) }),
+  NoteCodeBlock.extend({ addNodeView: () => ReactNodeViewRenderer(CodeBlockView) }),
+  CalcBlock.extend({ addNodeView: () => ReactNodeViewRenderer(CalcBlockView) }),
+  CalcRef.extend({ addNodeView: () => ReactNodeViewRenderer(CalcRefView, { as: "span" }) }),
 ]
 
 export interface NoteEditorProps {
@@ -109,6 +120,29 @@ function inCodeBlock(editor: Editor): boolean {
   return editor.state.selection.$from.parent.type.name === "codeBlock"
 }
 
+/** Pasted text in a calculation: one line per line, never formatting. */
+function pasteIntoCalc(editor: Editor, text: string): boolean {
+  const lines = text.replace(/\r\n?/g, "\n").replace(/\n+$/, "").split("\n")
+  const chain = editor.chain().focus()
+  lines.forEach((line, i) => {
+    if (i) chain.splitBlock()
+    if (line) chain.insertContent({ type: "text", text: line })
+  })
+  return chain.run()
+}
+
+/** A `/` or `@` menu is open, so Escape closes it rather than leaving the editor. */
+function suggesting(view: EditorView): boolean {
+  return [slashKey, refPickerKey].some((key) => (key.getState(view.state) as { active?: boolean } | undefined)?.active)
+}
+
+const PLACEHOLDERS = {
+  page: "Start writing, type / for blocks, or paste anything…",
+  pane: "Write something, or type / for blocks…",
+  line: "Type / for blocks",
+  calc: "Try 1.5 l in ml, rent = 2,100, 20% of 85, 100 USD in INR…",
+}
+
 /** After an image or file is put in at the very end, adds a line to keep typing on and moves the caret there. */
 function continueAfterMedia(editor: Editor) {
   const { doc, selection } = editor.state
@@ -179,6 +213,7 @@ function LoadedEditor({ doc, clip, page, readOnly, previous, onContinue }: NoteE
   const pasteText = (input: TextInput): boolean => {
     const editor = editorRef.current
     if (!editor || inCodeBlock(editor)) return false
+    if (editor.state.selection.$from.parent.type.name === "calcLine") return pasteIntoCalc(editor, input.text)
     if (input.language) return insertCode(editor, input.text, input.language)
     if (input.html) {
       if (!needsAdoption(input.html)) return false
@@ -216,13 +251,25 @@ function LoadedEditor({ doc, clip, page, readOnly, previous, onContinue }: NoteE
     for (const input of inputs) if (input.type === "text" && !pasteText(input)) pasteNatively(editor.view, input)
   }
 
+  const fileInput = useRef<HTMLInputElement>(null)
+
   const editor = useEditor({
     extensions: [
       ...NOTE_TEXT_EXTENSIONS,
       ...NOTE_NODE_VIEWS,
       Markdown,
-      Placeholder.configure({ placeholder: page ? "Start writing, or paste anything…" : "Write something…" }),
+      Placeholder.configure({
+        includeChildren: true,
+        placeholder: ({ editor: e, node, pos }) => {
+          // Only a new, one-line calculation suggests what to write.
+          if (node.type.name === "calcLine") return e.state.doc.resolve(pos).parent.childCount === 1 ? PLACEHOLDERS.calc : ""
+          if (e.isEmpty) return page ? PLACEHOLDERS.page : PLACEHOLDERS.pane
+          return node.type.name === "paragraph" ? PLACEHOLDERS.line : ""
+        },
+      }),
       Collaboration.configure({ document: doc }),
+      CalcEditing.configure({ noteId: clip.id }),
+      SlashMenu.configure({ pickFiles: () => fileInput.current?.click() }),
     ],
     editable: !readOnly,
     autofocus: page && !readOnly ? "end" : false,
@@ -257,6 +304,7 @@ function LoadedEditor({ doc, clip, page, readOnly, previous, onContinue }: NoteE
       },
       handleKeyDown: (view, event) => {
         if (event.key === "Escape") {
+          if (suggesting(view)) return false
           view.dom.blur()
           return true
         }
@@ -343,11 +391,46 @@ function LoadedEditor({ doc, clip, page, readOnly, previous, onContinue }: NoteE
 
   const blank = useEditorState({ editor, selector: ({ editor: e }) => (e ? !docHasContent(e.state.doc) : true) })
 
-  if (!page) return <EditorContent editor={editor} className="min-h-full" />
+  const chooser = (
+    <input
+      ref={fileInput}
+      type="file"
+      multiple
+      hidden
+      onChange={(event) => {
+        const files = [...(event.target.files ?? [])]
+        event.target.value = ""
+        if (files.length) void insertFiles(files)
+      }}
+    />
+  )
+  const menus = editor && !readOnly && (
+    <>
+      <NoteBubbleMenu editor={editor} />
+      <NoteTableMenu editor={editor} />
+    </>
+  )
+
+  if (!page)
+    return (
+      <>
+        <EditorContent editor={editor} className="min-h-full" />
+        {menus}
+        {chooser}
+      </>
+    )
 
   return (
     <div className="mx-auto flex min-h-full w-full max-w-[42.5rem] flex-col px-8 pt-12 pb-[30vh]">
       <EditorContent editor={editor} className="min-h-full" />
+      {menus}
+      {chooser}
+      {editor && !readOnly && (
+        <DragHandle editor={editor} className="note-drag-handle">
+          <GripVertical aria-label="Drag to move" />
+        </DragHandle>
+      )}
+      {editor && <NoteOutline editor={editor} />}
       {blank && !readOnly && <BlankHints previous={previous} onContinue={onContinue} />}
     </div>
   )
@@ -386,6 +469,12 @@ function BlankHints({ previous, onContinue }: { previous?: Clip; onContinue?: ()
       )}
       <span className="flex items-center gap-2">
         <Kbd>⌘V</Kbd> Paste text, images or files straight into the note
+      </span>
+      <span className="flex items-center gap-2">
+        <Kbd>/</Kbd> Headings, lists, tables, code and calculations
+      </span>
+      <span className="flex items-center gap-2">
+        <Kbd>=</Kbd> Write a sum like <code className="font-mono text-caption">20% of 85</code> and its answer appears
       </span>
     </div>
   )

@@ -17,7 +17,6 @@ import {
 } from "lucide-react"
 import { lazy, type ReactNode, Suspense, useEffect, useLayoutEffect, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -26,12 +25,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Kbd } from "@/components/ui/kbd"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { renameClip, updateClip } from "@/db/actions"
-import { type Clip, isFileClip, type TextClip, type TextKind } from "@/db/schema"
+import { type Clip, isFileClip, type TextKind } from "@/db/schema"
 import { isDownloadOnly } from "@/lib/clipboard"
-import { type LanguageOption, loadLanguages } from "@/lib/code"
 import { clipDetail, clipLabel, clipSize, extensionStart, fileExtension, formatAgo, formatBytes, formatDate, kindLabel } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import { useActions } from "@/state/actions"
@@ -41,6 +38,7 @@ import { openNote } from "@/state/notes"
 import { useUi } from "@/state/ui"
 import { CodeView, ColorView, FileCard, ImageView, JsonView, LinkView, MarkdownView, MediaView, PdfView, TextEditor } from "./clip-body"
 import { ClipThumb, SpaceDot } from "./clip-visual"
+import { LanguagePicker } from "./language-picker"
 import { Segmented } from "./segmented"
 import { useView } from "@/state/route"
 
@@ -338,7 +336,9 @@ function Toolbar({ clip, editing, onEditingChange }: { clip: Clip } & ModeProps)
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
-          {clip.kind === "code" && <LanguagePicker clip={clip} />}
+          {clip.kind === "code" && (
+            <LanguagePicker language={clip.language} onSelect={(language) => void updateClip(clip.id, { language })} />
+          )}
           {(clip.kind === "markdown" || clip.kind === "code" || clip.kind === "json") && (
             <div className="ml-auto">
               <Segmented<"preview" | "edit">
@@ -355,49 +355,6 @@ function Toolbar({ clip, editing, onEditingChange }: { clip: Clip } & ModeProps)
         </>
       )}
     </div>
-  )
-}
-
-function LanguagePicker({ clip }: { clip: TextClip }) {
-  const [open, setOpen] = useState(false)
-  const [languages, setLanguages] = useState<LanguageOption[]>([])
-
-  useEffect(() => {
-    if (open && !languages.length) void loadLanguages().then(setLanguages)
-  }, [open, languages.length])
-
-  return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button variant="ghost" size="xs" className="font-mono text-caption text-muted-foreground">
-          {clip.language ?? "plain"}
-          <ChevronDown className="opacity-60" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent align="start" className="w-56 p-0">
-        <Command>
-          <CommandInput placeholder="Language…" />
-          <CommandList>
-            <CommandEmpty>No language</CommandEmpty>
-            <CommandGroup>
-              {languages.map((lang) => (
-                <CommandItem
-                  key={lang.id}
-                  value={`${lang.name} ${lang.id}`}
-                  onSelect={() => {
-                    void updateClip(clip.id, { language: lang.id })
-                    setOpen(false)
-                  }}
-                >
-                  {lang.name}
-                  {lang.id === clip.language && <Check className="ml-auto" />}
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
   )
 }
 

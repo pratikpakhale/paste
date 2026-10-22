@@ -1,4 +1,4 @@
-import { NodeViewWrapper, type ReactNodeViewProps } from "@tiptap/react"
+import { NodeViewContent, NodeViewWrapper, type ReactNodeViewProps } from "@tiptap/react"
 import { Download, ImageOff } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
@@ -9,6 +9,7 @@ import { classifyMime } from "@/lib/detect"
 import { formatBytes } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import { KIND_ICON } from "./kind-icons"
+import { LanguagePicker } from "./language-picker"
 
 interface ImageAttrs {
   blob: string | null
@@ -91,6 +92,30 @@ export function AttachmentView({ node, selected }: ReactNodeViewProps) {
           <Download />
         </Button>
       </div>
+    </NodeViewWrapper>
+  )
+}
+
+/** A code block, with a picker for its language in the corner. */
+export function CodeBlockView({ node, updateAttributes, editor }: ReactNodeViewProps) {
+  const language = node.attrs.language as string | null
+  return (
+    <NodeViewWrapper className="code-block group/code relative">
+      {editor.isEditable && (
+        <div
+          contentEditable={false}
+          className="absolute top-1.5 right-1.5 opacity-0 transition-opacity group-focus-within/code:opacity-100 group-hover/code:opacity-100"
+        >
+          <LanguagePicker
+            language={language}
+            onSelect={(id) => updateAttributes({ language: id })}
+            className="h-6 bg-background/80 backdrop-blur"
+          />
+        </div>
+      )}
+      <pre>
+        <NodeViewContent<"code"> as="code" />
+      </pre>
     </NodeViewWrapper>
   )
 }
