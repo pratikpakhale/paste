@@ -38,6 +38,17 @@ const SHORTCUTS: { group: string; items: [string, string][] }[] = [
     ],
   },
   {
+    group: "In a note",
+    items: [
+      ["/", "Add a heading, list, table, code or calculation"],
+      ["=", "Any calculation shows its answer; end a sentence with = for one"],
+      ["Tab", "Write that answer into the line"],
+      ["@", "In a calculation: use a name or another line's answer"],
+      ["⌘ ↵", "Leave a calculation"],
+      ["Click", "Copy an answer (⌥ for every digit)"],
+    ],
+  },
+  {
     group: "Capture",
     items: [
       ["⌘ V", "In a list: paste as a new clip"],

@@ -8,6 +8,7 @@ import { clipDetail, formatAgo } from "@/lib/format"
 import { requestEdit } from "@/lib/ui-events"
 import { cn } from "@/lib/utils"
 import { useActions } from "@/state/actions"
+import { useCalcSummary } from "@/state/calc"
 import { useData } from "@/state/data"
 import { newNote, openNote, useOtherTabs, useSaving } from "@/state/notes"
 import { useUi } from "@/state/ui"
@@ -86,6 +87,7 @@ function WriteNote({ clip }: { clip: TextClip }) {
   const actions = useActions()
   const others = useOtherTabs(clip.id)
   const saving = useSaving(clip.id)
+  const summary = useCalcSummary((s) => s.byNote[clip.id])
   const inTrash = clip.deletedAt !== null
   const blank = isBlankNote(clip)
 
@@ -131,7 +133,15 @@ function WriteNote({ clip }: { clip: TextClip }) {
         <BlankHint />
       ) : (
         <>
-          <span>{clipDetail(clip)}</span>
+          {summary ? (
+            <span className="text-muted-foreground tabular-nums" aria-live="polite">
+              {summary.count} answers
+              {summary.sum && <> · Σ {summary.sum}</>}
+              {summary.average && <> · avg {summary.average}</>}
+            </span>
+          ) : (
+            <span>{clipDetail(clip)}</span>
+          )}
           {!inTrash && (
             <span className="flex items-center gap-1" aria-live="polite">
               {saving ? (
